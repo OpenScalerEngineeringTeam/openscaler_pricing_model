@@ -1,0 +1,248 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);color:var(--color-text-primary)}
+.section{margin-bottom:1.5rem}
+.section-title{font-size:13px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.75rem}
+.params-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 20px}
+.param-row{display:flex;flex-direction:column;gap:4px}
+.param-label{font-size:12px;color:var(--color-text-secondary);display:flex;justify-content:space-between}
+.param-val{font-weight:500;color:var(--color-text-primary);font-size:12px}
+.metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1.5rem}
+.metric{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:.75rem 1rem}
+.metric-label{font-size:11px;color:var(--color-text-secondary);margin-bottom:4px}
+.metric-value{font-size:18px;font-weight:500;color:var(--color-text-primary)}
+.metric-value.danger{color:var(--color-text-danger)}
+.metric-value.success{color:var(--color-text-success)}
+.metric-value.warn{color:var(--color-text-warning)}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:1.5rem}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1rem}
+.vm-table{width:100%;font-size:12px;border-collapse:collapse}
+.vm-table th{font-weight:500;font-size:11px;color:var(--color-text-secondary);text-align:left;padding:4px 6px;border-bottom:0.5px solid var(--color-border-tertiary)}
+.vm-table td{padding:5px 6px;border-bottom:0.5px solid var(--color-border-tertiary)}
+.pill{font-size:10px;padding:2px 7px;border-radius:20px;font-weight:500}
+.pill-ok{background:#EAF3DE;color:#3B6D11}
+.pill-warn{background:#FAEEDA;color:#854F0B}
+.pill-bad{background:#FCEBEB;color:#A32D2D}
+.tabs{display:flex;gap:8px;margin-bottom:1rem}
+.tab{font-size:12px;padding:4px 12px;border:0.5px solid var(--color-border-secondary);border-radius:20px;background:transparent;cursor:pointer;color:var(--color-text-secondary)}
+.tab.active{background:var(--color-text-primary);color:var(--color-background-primary);border-color:transparent}
+.breakdown-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px}
+.breakdown-bar-wrap{flex:1;height:8px;background:var(--color-background-secondary);border-radius:4px;overflow:hidden}
+.breakdown-bar{height:100%;border-radius:4px}
+.breakdown-name{width:100px;color:var(--color-text-secondary)}
+.breakdown-pct{width:36px;text-align:right;color:var(--color-text-secondary);font-variant-numeric:tabular-nums}
+.breakdown-val{width:85px;text-align:right;font-variant-numeric:tabular-nums;color:var(--color-text-primary)}
+.scenario-toggle{display:flex;gap:0;margin-bottom:1rem;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);overflow:hidden;width:fit-content}
+.sc-btn{font-size:12px;padding:5px 14px;border:none;background:transparent;cursor:pointer;color:var(--color-text-secondary)}
+.sc-btn.active{background:var(--color-text-primary);color:var(--color-background-primary)}
+input[type=range]{width:100%}
+</style>
+
+<h2 class="sr-only">OpenScaler cloud cost estimator — monthly per-server cost breakdown and VM pricing model</h2>
+
+<div style="padding:.5rem 0">
+
+<div class="section">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
+    <span class="section-title" style="margin-bottom:0">Scenario</span>
+    <div class="scenario-toggle">
+      <button class="sc-btn active" id="sc-p2" onclick="setScenario('p2')">Phase 2 — self-assembled</button>
+      <button class="sc-btn" id="sc-p1" onclick="setScenario('p1')">Phase 1 — AT hardware</button>
+    </div>
+  </div>
+</div>
+
+<div class="metrics-grid" id="metrics"></div>
+
+<div class="two-col">
+  <div class="card">
+    <div class="section-title">Cost breakdown / server / month</div>
+    <div id="breakdown"></div>
+  </div>
+  <div class="card">
+    <div class="section-title">VM pricing vs your plans</div>
+    <div id="vm-table-wrap"></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="section-title">Parameters</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px 24px" id="controls"></div>
+</div>
+
+</div>
+
+<script>
+const P = {
+  usd_dzd: 135,
+  hw_usd: 4000,
+  customs_pct: 0.35,
+  amort_months: 48,
+  server_w: 300,
+  pue: 1.4,
+  power_dzd_kwh: 4.68,
+  rack_u: 2,
+  rack_per_u_dzd: 3000,
+  bw_mbps: 1000,
+  bw_dzd_mbps: 5,
+  num_servers: 20,
+  team_people: 2,
+  salary_dzd: 150000,
+  cpu_cores: 24,
+  cpu_oversub: 4,
+  ram_gb: 128,
+  ram_oversub: 1.2,
+  avg_vm_ram: 2,
+  utilization: 0.70,
+  margin: 0.40,
+};
+
+let scenario = 'p2';
+
+const PLANS = [
+  {label:'Micro (0.5GiB/1vCPU)', monthly_usd:1.50, ram:0.5},
+  {label:'Starter (1GiB/1vCPU)', monthly_usd:2.50, ram:1},
+  {label:'Basic (2GiB/1vCPU)', monthly_usd:3.50, ram:2},
+  {label:'Standard (4GiB/2vCPU)', monthly_usd:7.50, ram:4},
+  {label:'Growth (8GiB/4vCPU)', monthly_usd:15.00, ram:8},
+  {label:'Pro (16GiB/8vCPU)', monthly_usd:25.00, ram:16},
+];
+
+const BAR_COLORS = ['#378ADD','#1D9E75','#D85A30','#BA7517','#7F77DD','#D4537E'];
+const BAR_LABELS = ['Hardware','Power','Rack','Bandwidth','Team','Misc'];
+
+function fmt(n){return Math.round(n).toLocaleString()}
+function fmtK(n){return n>=1000?(n/1000).toFixed(1)+'k':Math.round(n).toString()}
+
+function compute(){
+  let hw_landed_dzd, monthly_hw;
+  if(scenario==='p1'){
+    hw_landed_dzd = 2000000;
+    monthly_hw = hw_landed_dzd / Math.min(P.amort_months, 36);
+  } else {
+    hw_landed_dzd = P.hw_usd * (1 + P.customs_pct) * P.usd_dzd;
+    monthly_hw = hw_landed_dzd / P.amort_months;
+  }
+
+  const monthly_power = P.server_w * P.pue * 720 / 1000 * P.power_dzd_kwh;
+  const monthly_rack = P.rack_per_u_dzd * P.rack_u;
+  const monthly_bw = (P.bw_mbps / Math.max(P.num_servers,1)) * P.bw_dzd_mbps;
+  const monthly_team = (P.team_people * P.salary_dzd) / Math.max(P.num_servers,1);
+  const monthly_misc = (hw_landed_dzd * 0.05 / 12) + 2000;
+  const total = monthly_hw + monthly_power + monthly_rack + monthly_bw + monthly_team + monthly_misc;
+
+  const sellable_by_ram = (P.ram_gb / P.ram_oversub) / P.avg_vm_ram;
+  const sellable_by_cpu = P.cpu_cores * P.cpu_oversub / 1;
+  const sellable_vms = Math.floor(Math.min(sellable_by_ram, sellable_by_cpu));
+  const paying_vms = sellable_vms * P.utilization;
+  const cost_per_paying_vm = paying_vms > 0 ? total / paying_vms : 999999;
+  const min_price_vm = cost_per_paying_vm / (1 - P.margin);
+
+  return {
+    monthly_hw, monthly_power, monthly_rack, monthly_bw, monthly_team, monthly_misc,
+    total, sellable_vms, paying_vms, cost_per_paying_vm, min_price_vm,
+    hw_landed_dzd
+  };
+}
+
+function render(){
+  const C = compute();
+  const usd = P.usd_dzd;
+
+  const metricsEl = document.getElementById('metrics');
+  const totalUsd = C.total / usd;
+  const breakEvenUsd = C.min_price_vm / usd;
+  metricsEl.innerHTML = `
+    <div class="metric"><div class="metric-label">Total cost / server / mo</div><div class="metric-value">${fmt(C.total)} DZD</div></div>
+    <div class="metric"><div class="metric-label">VM slots (at ${Math.round(P.utilization*100)}% util)</div><div class="metric-value">${Math.round(C.paying_vms)} / ${C.sellable_vms}</div></div>
+    <div class="metric"><div class="metric-label">Break-even price / VM</div><div class="metric-value ${C.cost_per_paying_vm/usd>5?'danger':'success'}">\$${(C.cost_per_paying_vm/usd).toFixed(2)}</div></div>
+    <div class="metric"><div class="metric-label">Min sale price / VM (${Math.round(P.margin*100)}% margin)</div><div class="metric-value ${C.min_price_vm/usd>8?'warn':''}">\$${(C.min_price_vm/usd).toFixed(2)}</div></div>
+  `;
+
+  const costs = [C.monthly_hw, C.monthly_power, C.monthly_rack, C.monthly_bw, C.monthly_team, C.monthly_misc];
+  const pcts = costs.map(c => c/C.total*100);
+  const breakEl = document.getElementById('breakdown');
+  breakEl.innerHTML = costs.map((c,i)=>`
+    <div class="breakdown-row">
+      <span class="breakdown-name">${BAR_LABELS[i]}</span>
+      <div class="breakdown-bar-wrap"><div class="breakdown-bar" style="width:${Math.round(pcts[i])}%;background:${BAR_COLORS[i]}"></div></div>
+      <span class="breakdown-pct">${Math.round(pcts[i])}%</span>
+      <span class="breakdown-val">${fmt(c)}</span>
+    </div>
+  `).join('');
+
+  const vmEl = document.getElementById('vm-table-wrap');
+  vmEl.innerHTML = `<table class="vm-table">
+    <thead><tr>
+      <th>Plan</th>
+      <th style="text-align:right">Your price</th>
+      <th style="text-align:right">Break-even</th>
+      <th style="text-align:right">Margin</th>
+    </tr></thead>
+    <tbody>
+    ${PLANS.map(pl=>{
+      const scale = pl.ram / P.avg_vm_ram;
+      const beUsd = (C.cost_per_paying_vm / usd) * scale;
+      const mgn = ((pl.monthly_usd - beUsd) / pl.monthly_usd * 100);
+      const cls = mgn > 30 ? 'pill-ok' : mgn > 0 ? 'pill-warn' : 'pill-bad';
+      const mgnLabel = mgn > 0 ? '+'+Math.round(mgn)+'%' : Math.round(mgn)+'%';
+      return `<tr>
+        <td style="color:var(--color-text-secondary)">${pl.label}</td>
+        <td style="text-align:right">\$${pl.monthly_usd.toFixed(2)}</td>
+        <td style="text-align:right">\$${beUsd.toFixed(2)}</td>
+        <td style="text-align:right"><span class="pill ${cls}">${mgnLabel}</span></td>
+      </tr>`;
+    }).join('')}
+    </tbody>
+  </table>`;
+
+  renderControls();
+}
+
+const CONTROLS = [
+  {key:'hw_usd', label:'Server components (USD)', min:1500, max:10000, step:100, unit:'$', show:()=>scenario==='p2'},
+  {key:'customs_pct', label:'Import overhead', min:0.15, max:0.60, step:0.01, fmt:v=>Math.round(v*100)+'%', show:()=>scenario==='p2'},
+  {key:'amort_months', label:'Amortization (months)', min:24, max:72, step:6, unit:'mo'},
+  {key:'usd_dzd', label:'USD/DZD rate', min:100, max:200, step:1, unit:'DZD'},
+  {key:'server_w', label:'Server TDP (W)', min:100, max:600, step:10, unit:'W'},
+  {key:'pue', label:'PUE', min:1.1, max:2.0, step:0.05, fmt:v=>v.toFixed(2)},
+  {key:'rack_per_u_dzd', label:'Rack cost per U/mo (DZD)', min:500, max:15000, step:500, unit:'DZD'},
+  {key:'bw_dzd_mbps', label:'AT bandwidth (DZD/Mbps)', min:0.5, max:30, step:0.5, fmt:v=>v.toFixed(1)},
+  {key:'bw_mbps', label:'Committed bandwidth (Mbps)', min:100, max:10000, step:100, unit:'Mbps'},
+  {key:'num_servers', label:'Fleet size (servers)', min:2, max:200, step:1, unit:''},
+  {key:'team_people', label:'Ops team headcount', min:1, max:10, step:1, unit:''},
+  {key:'salary_dzd', label:'Salary per person (DZD)', min:50000, max:400000, step:10000, unit:'DZD'},
+  {key:'cpu_cores', label:'Cores per server', min:8, max:96, step:4, unit:'c'},
+  {key:'cpu_oversub', label:'CPU oversubscription', min:1, max:10, step:0.5, fmt:v=>v.toFixed(1)+'×'},
+  {key:'ram_gb', label:'RAM per server (GB)', min:32, max:512, step:16, unit:'GB'},
+  {key:'avg_vm_ram', label:'Avg VM RAM (GiB)', min:0.5, max:8, step:0.5, fmt:v=>v.toFixed(1)},
+  {key:'utilization', label:'Target utilization', min:0.30, max:0.95, step:0.05, fmt:v=>Math.round(v*100)+'%'},
+  {key:'margin', label:'Target gross margin', min:0.10, max:0.70, step:0.05, fmt:v=>Math.round(v*100)+'%'},
+];
+
+function renderControls(){
+  const el = document.getElementById('controls');
+  el.innerHTML = CONTROLS.filter(c=>!c.show||c.show()).map(c=>{
+    const val = P[c.key];
+    const display = c.fmt ? c.fmt(val) : (c.unit==='$'?'$'+fmt(val): fmt(val)+(c.unit||''));
+    return `<div class="param-row">
+      <label class="param-label" for="sl-${c.key}">
+        <span>${c.label}</span>
+        <span class="param-val">${display}</span>
+      </label>
+      <input type="range" id="sl-${c.key}" min="${c.min}" max="${c.max}" step="${c.step}" value="${val}"
+        oninput="P['${c.key}']=+this.value;render()">
+    </div>`;
+  }).join('');
+}
+
+function setScenario(s){
+  scenario = s;
+  document.getElementById('sc-p1').classList.toggle('active', s==='p1');
+  document.getElementById('sc-p2').classList.toggle('active', s==='p2');
+  render();
+}
+
+render();
+</script>
