@@ -48,6 +48,13 @@ body{font-family:var(--font-sans,system-ui,-apple-system,sans-serif);color:var(-
 .sc-btn{font-size:12px;padding:6px 14px;border:none;background:transparent;cursor:pointer;color:var(--color-text-secondary);font-weight:500;transition:background .15s,color .15s}
 .sc-btn:hover:not(.active){background:var(--color-background-secondary,#f0f0eb)}
 .sc-btn.active{background:var(--color-text-primary,#1a1a1a);color:var(--color-background-primary,#fff)}
+.file-btn{font-size:12px;padding:6px 12px;border:0.5px solid var(--color-border-secondary,#ccc);border-radius:8px;background:var(--color-background-primary,#fff);cursor:pointer;color:var(--color-text-primary);font-weight:500;transition:background .15s}
+.file-btn:hover{background:var(--color-background-secondary,#f0f0eb)}
+.file-btn--primary{background:var(--color-text-primary,#1a1a1a);color:var(--color-background-primary,#fff);border-color:var(--color-text-primary,#1a1a1a)}
+.file-btn--primary:hover{opacity:.92}
+.file-input-hidden{position:absolute;width:0;height:0;opacity:0;pointer-events:none}
+.save-status{font-size:11px;color:var(--color-text-success,#3b6d11);min-width:5.5em;text-align:right;opacity:0;transition:opacity .25s}
+.save-status.visible{opacity:1}
 .param-group{background:var(--color-background-secondary,#f8f8f6);border:0.5px solid var(--color-border-tertiary,#e8e8e3);border-radius:10px;padding:.85rem .95rem 1rem}
 .param-group-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-secondary,#555);margin-bottom:2px}
 .param-group-desc{font-size:11px;color:var(--color-text-tertiary,#888);margin-bottom:.65rem;line-height:1.35}
@@ -84,6 +91,10 @@ input[type=range]::-webkit-slider-thumb{cursor:pointer}
         <option value="dzd">DZD</option>
       </select>
     </div>
+    <button type="button" class="file-btn file-btn--primary" onclick="saveConfigToFile()" title="Save config (Ctrl+S)">Save config…</button>
+    <button type="button" class="file-btn" onclick="document.getElementById('config-file-input').click()" title="Load config">Load config…</button>
+    <input type="file" id="config-file-input" class="file-input-hidden" accept=".json,application/json" onchange="loadConfigFromFile(this)">
+    <span id="save-status" class="save-status" aria-live="polite"></span>
   </div>
 </div>
 
@@ -518,6 +529,283 @@ function mapPlansFromJson(sizes){
   }));
 }
 
+const CONFIG_FORMAT = 'openscaler-cost-model';
+const CONFIG_VERSION = 1;
+const CONFIG_FILE_TYPES = [{ description: 'OpenScaler cost model', accept: { 'application/json': ['.json'] } }];
+
+let saveStatusTimer = null;
+
+const HIDDEN_PARAMS = {
+  power_dzd_kwh: {
+    label: 'Electricity rate',
+    unit: 'DZD/kWh',
+    group: 'Fixed constants (not in UI sliders)',
+    description: 'Algeria subsidized commercial rate used for monthly power per server (server_w × PUE × 720h).',
+  },
+  rack_u: {
+    label: 'Rack units per server',
+    unit: 'U',
+    group: 'Fixed constants (not in UI sliders)',
+    description: 'Physical rack height assumed per host when splitting colocation cost (monthly_rack = rack_per_u_dzd × rack_u).',
+  },
+};
+
+const SCENARIO_LABELS = {
+  p1: 'Phase 1 — AT hardware (fixed 2M DZD landed cost, 36 mo amort cap)',
+  p2: 'Phase 2 — self-assembled (BOM USD + import overhead, full amortization)',
+};
+
+function buildParameterExport(){
+  const out = {};
+  for (const g of CONTROL_GROUPS) {
+    for (const f of g.fields) {
+      out[f.key] = {
+        value: P[f.key],
+        label: f.label,
+        unit: f.unit || null,
+        group: g.title,
+        group_description: g.desc,
+        description: f.tip || null,
+        editable_in_ui: true,
+      };
+    }
+  }
+  for (const [key, info] of Object.entries(HIDDEN_PARAMS)) {
+    if (!(key in out) && key in P) {
+      out[key] = {
+        value: P[key],
+        label: info.label,
+        unit: info.unit,
+        group: info.group,
+        description: info.description,
+        editable_in_ui: false,
+      };
+    }
+  }
+  return out;
+}
+
+function buildComputedSnapshot(){
+  const C = compute();
+  const usd = P.usd_dzd;
+  const refPlan = {
+    memory: P.avg_vm_ram, vcpus: P.avg_vm_vcpu,
+    disk: P.avg_vm_disk_gb, transfer: P.avg_vm_transfer_tb,
+  };
+  const refBeDzd = planBreakEvenDzd(refPlan, C);
+  const refTargetDzd = refBeDzd / (1 - P.margin);
+  return {
+    currency_note: 'Internal model runs in DZD; USD figures use parameters.usd_dzd.value.',
+    cost_per_server_month_dzd: Math.round(C.total),
+    cost_breakdown_dzd: {
+      hardware: Math.round(C.monthly_hw),
+      power: Math.round(C.monthly_power),
+      rack: Math.round(C.monthly_rack),
+      transit_bandwidth: Math.round(C.monthly_bw),
+      storage_nvme: Math.round(C.monthly_storage),
+      team_ops: Math.round(C.monthly_team),
+      misc: Math.round(C.monthly_misc),
+    },
+    capacity: {
+      sellable_vm_slots: C.sellable_vms,
+      paying_vms_at_utilization: Math.round(C.paying_vms),
+      utilization_pct: Math.round(P.utilization * 100),
+      binding_constraint: C.binding,
+      sellable_by_ram: Math.round(C.sellable_by_ram * 10) / 10,
+      sellable_by_cpu: Math.round(C.sellable_by_cpu * 10) / 10,
+      sellable_by_disk: Math.round(C.sellable_by_disk * 10) / 10,
+    },
+    reference_vm: {
+      spec: `${P.avg_vm_ram} GiB RAM · ${P.avg_vm_vcpu} vCPU · ${P.avg_vm_disk_gb} GB disk · ${P.avg_vm_transfer_tb} TB transfer`,
+      break_even_dzd: Math.round(refBeDzd),
+      break_even_usd: Math.round(refBeDzd / usd * 100) / 100,
+      target_price_dzd: Math.round(refTargetDzd),
+      target_price_usd: Math.round(refTargetDzd / usd * 100) / 100,
+      target_margin_pct: Math.round(P.margin * 100),
+    },
+    catalog_summary: {
+      plan_count: PLANS.length,
+      plans_above_target: PLANS.filter(pl => {
+        const targetDzd = planBreakEvenDzd(pl, C) / (1 - P.margin);
+        return listedDzd(pl) >= targetDzd;
+      }).length,
+      plans_below_target: PLANS.filter(pl => {
+        const targetDzd = planBreakEvenDzd(pl, C) / (1 - P.margin);
+        return listedDzd(pl) < targetDzd;
+      }).length,
+    },
+  };
+}
+
+function buildConfigDocument(){
+  return {
+    _meta: {
+      format: CONFIG_FORMAT,
+      format_version: CONFIG_VERSION,
+      saved_at: new Date().toISOString(),
+      tool: 'OpenScaler cloud cost estimator',
+      source_file: 'openscaler_cost_model.html',
+      purpose: 'Saved snapshot of model inputs and VM catalog for OpenScaler pricing analysis.',
+    },
+    _readme: {
+      what_this_is: 'Configuration export from the OpenScaler cost model — an interactive estimator that breaks down monthly per-server costs (hardware, power, rack, transit, storage, ops) and compares catalog VM prices to model break-even and target prices.',
+      how_to_restore: 'Open openscaler_cost_model.html and click "Load config…", or paste this file into an AI assistant as context when discussing pricing.',
+      scenarios: SCENARIO_LABELS,
+      key_concepts: {
+        break_even: 'Minimum price to cover allocated compute slot + provisioned disk + included transfer for each plan (before profit).',
+        target: 'Break-even ÷ (1 − margin). Listed catalog price should ideally be at or above target.',
+        listed: 'Current retail price in the VM catalog (monthly_usd on each plan, converted to DZD via FX).',
+        phase_1: 'Uses fixed 2,000,000 DZD landed server cost (Algérie Télécom hardware path).',
+        phase_2: 'Uses self-built BOM in USD plus import overhead percentage, amortized over amort_months.',
+      },
+      file_sections: {
+        ui: 'Display preferences and active scenario (p1 or p2).',
+        parameters: 'All numeric model inputs; each entry has value, label, unit, and description.',
+        catalog: 'VM plans compared in the pricing table (specs + listed monthly USD).',
+        computed_snapshot: 'Derived metrics at save time — useful context without re-running the model.',
+      },
+    },
+    ui: {
+      scenario,
+      scenario_label: SCENARIO_LABELS[scenario],
+      price_display: priceDisplay,
+      active_param_tab: activeParamTab,
+    },
+    parameters: buildParameterExport(),
+    catalog: {
+      note: 'Plans used in "VM pricing vs catalog". monthly_usd is the listed retail price; break-even/target are computed from parameters.',
+      plans: PLANS.map(pl => ({
+        id: pl.id,
+        name: pl.name,
+        vcpus: pl.vcpus,
+        memory_gib: pl.memory,
+        disk_gb: pl.disk,
+        transfer_tb: pl.transfer,
+        units: pl.units,
+        listed_monthly_usd: pl.monthly_usd,
+        listed_monthly_dzd: Math.round(pl.monthly_usd * P.usd_dzd * 100) / 100,
+      })),
+    },
+    computed_snapshot: buildComputedSnapshot(),
+  };
+}
+
+function configJsonString(){
+  return JSON.stringify(buildConfigDocument(), null, 2);
+}
+
+function downloadConfigJson(json, filename){
+  const blob = new Blob([json], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function flashSaveStatus(msg){
+  const el = document.getElementById('save-status');
+  if(!el) return;
+  el.textContent = msg;
+  el.classList.add('visible');
+  clearTimeout(saveStatusTimer);
+  saveStatusTimer = setTimeout(() => el.classList.remove('visible'), 2200);
+}
+
+async function writeConfigToHandle(handle){
+  const writable = await handle.createWritable();
+  await writable.write(configJsonString());
+  await writable.close();
+}
+
+async function saveConfigToFile(){
+  const json = configJsonString();
+  const stamp = new Date().toISOString().slice(0, 10);
+  if(window.showSaveFilePicker){
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: `openscaler-cost-model-${stamp}.json`,
+        types: CONFIG_FILE_TYPES,
+      });
+      await writeConfigToHandle(handle);
+      flashSaveStatus('Saved');
+      return;
+    } catch (err) {
+      if(err.name === 'AbortError') return;
+    }
+  }
+  downloadConfigJson(json, `openscaler-cost-model-${stamp}.json`);
+  flashSaveStatus('Saved');
+}
+
+function onSaveShortcut(e){
+  if(!(e.ctrlKey || e.metaKey) || (e.key !== 's' && e.key !== 'S')) return;
+  e.preventDefault();
+  saveConfigToFile();
+}
+
+function applyConfigDocument(data){
+  if(!data || data._meta?.format !== CONFIG_FORMAT){
+    throw new Error('Not a valid OpenScaler cost model config (missing or unknown format).');
+  }
+  if(data._meta?.format_version > CONFIG_VERSION){
+    throw new Error('Config was saved with a newer format version — update openscaler_cost_model.html.');
+  }
+
+  const params = data.parameters;
+  if(params && typeof params === 'object'){
+    for (const [key, entry] of Object.entries(params)) {
+      const val = entry && typeof entry === 'object' ? entry.value : entry;
+      if(key in P && typeof val === 'number' && !Number.isNaN(val)) P[key] = val;
+    }
+  } else if(data.P && typeof data.P === 'object'){
+    for (const [key, val] of Object.entries(data.P)) {
+      if(key in P && typeof val === 'number') P[key] = val;
+    }
+  }
+
+  const plans = data.catalog?.plans ?? data.plans;
+  if(Array.isArray(plans) && plans.length){
+    PLANS = plans.map(p => ({
+      id: p.id,
+      name: p.name,
+      memory: p.memory_gib ?? p.memory,
+      vcpus: p.vcpus,
+      disk: p.disk_gb ?? p.disk,
+      transfer: p.transfer_tb ?? p.transfer,
+      units: p.units,
+      monthly_usd: p.listed_monthly_usd ?? p.monthly_usd ?? parseFloat(p.price_monthly),
+    }));
+  }
+
+  if(data.ui){
+    if(data.ui.scenario === 'p1' || data.ui.scenario === 'p2') scenario = data.ui.scenario;
+    if(data.ui.price_display === 'usd' || data.ui.price_display === 'dzd') priceDisplay = data.ui.price_display;
+    if(data.ui.active_param_tab) activeParamTab = data.ui.active_param_tab;
+  }
+
+  document.getElementById('sc-p1').classList.toggle('active', scenario === 'p1');
+  document.getElementById('sc-p2').classList.toggle('active', scenario === 'p2');
+  render();
+}
+
+function loadConfigFromFile(input){
+  const file = input.files && input.files[0];
+  input.value = '';
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      applyConfigDocument(data);
+    } catch (err) {
+      alert('Could not load config: ' + (err.message || String(err)));
+    }
+  };
+  reader.onerror = () => alert('Could not read the selected file.');
+  reader.readAsText(file);
+}
+
 async function loadPlansFromJson(){
   try {
     const res = await fetch('pricing_placeholders.json');
@@ -525,11 +813,15 @@ async function loadPlansFromJson(){
     const data = await res.json();
     if(data.sizes && data.sizes.length){
       PLANS = mapPlansFromJson(data.sizes);
-      render();
     }
   } catch (_) { /* file:// or missing — embedded PLANS used */ }
 }
 
-loadPlansFromJson();
-render();
+async function initApp(){
+  await loadPlansFromJson();
+  render();
+  document.addEventListener('keydown', onSaveShortcut);
+}
+
+initApp();
 </script>
