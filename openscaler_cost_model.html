@@ -80,9 +80,8 @@ input[type=range]::-webkit-slider-thumb{cursor:pointer}
     <div class="price-display-wrap">
       <label for="price-display">Price display</label>
       <select id="price-display" onchange="priceDisplay=this.value;render()">
-        <option value="usd">USD only</option>
-        <option value="both" selected>USD + client DZD</option>
-        <option value="dzd">DZD only</option>
+        <option value="usd" selected>USD</option>
+        <option value="dzd">DZD</option>
       </select>
     </div>
   </div>
@@ -112,7 +111,6 @@ input[type=range]::-webkit-slider-thumb{cursor:pointer}
 <script>
 const P = {
   usd_dzd: 135,
-  price_usd_dzd: 240,
   hw_usd: 4000,
   customs_pct: 0.35,
   amort_months: 48,
@@ -142,11 +140,10 @@ const P = {
 };
 
 let scenario = 'p2';
-let priceDisplay = 'both';
+let priceDisplay = 'usd';
 let activeParamTab = 'fx';
 
-function usdToClientDzd(usd){ return usd * P.price_usd_dzd; }
-function listedDzd(pl){ return pl.monthly_usd * P.price_usd_dzd; }
+function listedDzd(pl){ return pl.monthly_usd * P.usd_dzd; }
 
 function planBreakEvenDzd(pl, C){
   const computeScale = Math.max(pl.memory / P.avg_vm_ram, pl.vcpus / P.avg_vm_vcpu);
@@ -157,11 +154,7 @@ function planBreakEvenDzd(pl, C){
 
 function priceCellListed(pl){
   if(priceDisplay === 'dzd') return `${fmt(listedDzd(pl))} DZD`;
-  const usd = pl.monthly_usd;
-  if(priceDisplay === 'both'){
-    return `\$${usd.toFixed(2)}<span class="price-sub">${fmt(listedDzd(pl))} DZD</span>`;
-  }
-  return `\$${usd.toFixed(2)}`;
+  return `\$${pl.monthly_usd.toFixed(2)}`;
 }
 
 function priceCellModel(dzd, usd, opts){
@@ -170,12 +163,7 @@ function priceCellModel(dzd, usd, opts){
     if(opts && opts.hint === 'cost') return `${main}<span class="price-sub">cost basis</span>`;
     return main;
   }
-  const lines = [`\$${usd.toFixed(2)}`];
-  if(priceDisplay === 'both'){
-    if(opts && opts.costDzd) lines.push(`<span class="price-sub">${fmt(dzd)} DZD cost</span>`);
-    lines.push(`<span class="price-sub">${fmt(usdToClientDzd(usd))} DZD client</span>`);
-  }
-  return lines.join('');
+  return `\$${usd.toFixed(2)}`;
 }
 
 /** Synced from pricing_placeholders.json — refreshed on load when served over HTTP */
@@ -259,12 +247,9 @@ function planBreakEvenUsd(pl, C, usd){
 
 function priceFootnote(){
   if(priceDisplay === 'dzd'){
-    return `DZD-only view. <strong>Listed</strong> = catalog \$ × client FX (${P.price_usd_dzd}). <strong>Break-even &amp; target</strong> = native DZD from the cost model (no \$ round-trip). <strong>vs target</strong> compares those two DZD figures.`;
+    return `All amounts in DZD at <strong>${P.usd_dzd} DZD/\$</strong>. <strong>Listed</strong> = catalog \$ × FX. <strong>Break-even &amp; target</strong> from the cost model. <strong>vs target</strong> compares listed vs target in DZD.`;
   }
-  if(priceDisplay === 'both'){
-    return `USD + DZD. Model costs @ <strong>cost FX</strong> ${P.usd_dzd}. Client DZD on \$ amounts @ <strong>client FX</strong> ${P.price_usd_dzd}. Break-even shows cost DZD + client DZD.`;
-  }
-  return `USD only. Internal costs converted at <strong>cost FX</strong> ${P.usd_dzd} DZD/\$. Switch to DZD only to drop \$ and avoid client FX on break-even/target.`;
+  return `All amounts in USD. Costs use <strong>${P.usd_dzd} DZD/\$</strong> internally; break-even and target are converted from the DZD cost model. Switch to DZD to see retail prices in dinars.`;
 }
 
 function render(){
@@ -288,19 +273,12 @@ function render(){
   const refTargetMetric = priceDisplay === 'dzd'
     ? `${fmt(refTargetDzd)} DZD`
     : `$${refTargetUsd.toFixed(2)}`;
-  const refBeSub = priceDisplay === 'both'
-    ? `<div class="metric-sub">${fmt(refBeDzd)} DZD cost · ${fmt(usdToClientDzd(refBeUsd))} client</div>`
-    : priceDisplay === 'usd' ? '' : `<div class="metric-sub">native cost (no \$ conversion)</div>`;
-  const refTargetSub = priceDisplay === 'both'
-    ? `<div class="metric-sub">${fmt(refTargetDzd)} DZD cost · ${fmt(usdToClientDzd(refTargetUsd))} client</div>`
-    : priceDisplay === 'usd' ? '' : '';
-
   const metricsEl = document.getElementById('metrics');
   metricsEl.innerHTML = `
     <div class="metric"><div class="metric-label">Cost / server / mo</div><div class="metric-value">${fmt(C.total)} DZD</div><div class="metric-sub">FX ${P.usd_dzd}</div></div>
     <div class="metric"><div class="metric-label">VM slots · ${Math.round(P.utilization*100)}% · ${C.binding}</div><div class="metric-value">${Math.round(C.paying_vms)} / ${C.sellable_vms}</div></div>
-    <div class="metric"><div class="metric-label">Break-even · ${P.avg_vm_ram}G/${P.avg_vm_vcpu}c/${P.avg_vm_disk_gb}G/${P.avg_vm_transfer_tb}T</div><div class="metric-value ${refBeUsd>5?'danger':'success'}">${refBeMetric}</div>${refBeSub}</div>
-    <div class="metric"><div class="metric-label">Target · ${Math.round(P.margin*100)}% margin</div><div class="metric-value ${refTargetUsd>8?'warn':''}">${refTargetMetric}</div>${refTargetSub}</div>
+    <div class="metric"><div class="metric-label">Break-even · ${P.avg_vm_ram}G/${P.avg_vm_vcpu}c/${P.avg_vm_disk_gb}G/${P.avg_vm_transfer_tb}T</div><div class="metric-value ${refBeUsd>5?'danger':'success'}">${refBeMetric}</div></div>
+    <div class="metric"><div class="metric-label">Target · ${Math.round(P.margin*100)}% margin</div><div class="metric-value ${refTargetUsd>8?'warn':''}">${refTargetMetric}</div></div>
   `;
 
   const costs = [
@@ -344,7 +322,7 @@ function render(){
         <td><div>${pl.name}</div><div class="plan-id">${pl.id}</div></td>
         <td style="color:var(--color-text-secondary)">${spec}</td>
         <td style="text-align:right">${priceCellListed(pl)}</td>
-        <td style="text-align:right">${priceCellModel(beDzd, beUsd, {costDzd: true, hint: 'cost'})}</td>
+        <td style="text-align:right">${priceCellModel(beDzd, beUsd, {hint: 'cost'})}</td>
         <td style="text-align:right">${priceCellModel(targetDzd, targetUsd)}</td>
         <td style="text-align:right"><span class="pill ${cls}">${mgnLabel}</span></td>
       </tr>`;
@@ -361,13 +339,11 @@ function render(){
 const CONTROL_GROUPS = [
   {
     id: 'fx',
-    title: 'Exchange rates',
-    desc: 'Two rates: one for your real costs, one for how customers read $ prices.',
+    title: 'Exchange rate',
+    desc: 'Single DZD/USD rate for costs, catalog conversion, and DZD price display.',
     fields: [
-      {key:'usd_dzd', label:'Cost FX (official / import)', min:100, max:200, step:1, unit:'DZD/$',
-        tip:'DZD per USD for hardware imports, amortization, and internal cost math. Use bank or customs rate, not street rate.'},
-      {key:'price_usd_dzd', label:'Client FX (retail / parallel)', min:135, max:350, step:5, unit:'DZD/$',
-        tip:'DZD per USD when converting listed $ prices for customers. Often higher (e.g. ~240) — what people apply when they hear “$5/month”.'},
+      {key:'usd_dzd', label:'USD → DZD', min:100, max:350, step:1, unit:'DZD/$',
+        tip:'DZD per USD for hardware imports, listed catalog prices in DZD view, and converting model costs to dollars.'},
       {key:'amort_months', label:'Hardware amortization', min:24, max:72, step:6, unit:'mo',
         tip:'Months to spread server purchase cost. Phase 1 caps at 36 mo. Longer = lower monthly hardware line.'},
     ],
