@@ -1,8 +1,11 @@
 import type { ModelParams, Plan } from '../types';
+import { DEFAULT_HW_UNIT_PRICES } from './hardwareCost';
 
 export const DEFAULT_PARAMS: ModelParams = {
   usd_dzd: 135,
   hw_usd: 4000,
+  cpu_sockets: 1,
+  ...DEFAULT_HW_UNIT_PRICES,
   customs_pct: 0.35,
   amort_months: 48,
   server_w: 300,

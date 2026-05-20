@@ -4,6 +4,12 @@ export type PriceDisplay = 'usd' | 'dzd';
 export interface ModelParams {
   usd_dzd: number;
   hw_usd: number;
+  cpu_sockets: number;
+  hw_usd_per_cpu_socket: number;
+  hw_usd_per_gib_ram: number;
+  hw_usd_per_tb_nvme: number;
+  hw_usd_motherboard: number;
+  hw_usd_chassis_misc: number;
   customs_pct: number;
   amort_months: number;
   server_w: number;

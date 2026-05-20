@@ -1,13 +1,14 @@
 import type { ModelParams, PriceDisplay, Scenario } from '../types';
 
 export const CONFIG_FORMAT = 'openscaler-cost-model';
-export const CONFIG_VERSION = 2;
+export const CONFIG_VERSION = 3;
 
 export function buildConfigDocument(
   params: ModelParams,
   scenario: Scenario,
   priceDisplay: PriceDisplay,
   activeParamTab: string,
+  hwFromComponents: boolean,
 ) {
   return {
     _meta: {
@@ -15,7 +16,7 @@ export function buildConfigDocument(
       format_version: CONFIG_VERSION,
       saved_at: new Date().toISOString(),
     },
-    ui: { scenario, price_display: priceDisplay, active_param_tab: activeParamTab },
+    ui: { scenario, price_display: priceDisplay, active_param_tab: activeParamTab, hw_from_components: hwFromComponents },
     parameters: { ...params },
   };
 }
@@ -32,7 +33,7 @@ function readParameterValue(entry: unknown): number | undefined {
 export function applyConfigDocument(
   data: unknown,
   setParams: (fn: (prev: ModelParams) => ModelParams) => void,
-): { scenario?: Scenario; priceDisplay?: PriceDisplay; activeParamTab?: string } {
+): { scenario?: Scenario; priceDisplay?: PriceDisplay; activeParamTab?: string; hwFromComponents?: boolean } {
   const doc = data as Record<string, unknown>;
   if (!doc || (doc._meta as { format?: string })?.format !== CONFIG_FORMAT) {
     throw new Error('Not a valid OpenScaler cost model config (missing or unknown format).');
@@ -61,11 +62,17 @@ export function applyConfigDocument(
     return next;
   });
 
-  const ui = doc.ui as { scenario?: Scenario; price_display?: PriceDisplay; active_param_tab?: string } | undefined;
+  const ui = doc.ui as {
+    scenario?: Scenario;
+    price_display?: PriceDisplay;
+    active_param_tab?: string;
+    hw_from_components?: boolean;
+  } | undefined;
   return {
     scenario: ui?.scenario === 'p1' || ui?.scenario === 'p2' ? ui.scenario : undefined,
     priceDisplay: ui?.price_display === 'usd' || ui?.price_display === 'dzd' ? ui.price_display : undefined,
     activeParamTab: ui?.active_param_tab,
+    hwFromComponents: ui?.hw_from_components === true ? true : ui?.hw_from_components === false ? false : undefined,
   };
 }
 

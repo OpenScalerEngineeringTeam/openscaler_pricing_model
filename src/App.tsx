@@ -16,10 +16,11 @@ export default function App() {
   const [scenario, setScenario] = useState<Scenario>('p2');
   const [priceDisplay, setPriceDisplay] = useState<PriceDisplay>('usd');
   const [activeParamTab, setActiveParamTab] = useState('fx');
+  const [hwFromComponents, setHwFromComponents] = useState(false);
   const [saveStatus, setSaveStatus] = useState('');
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const computed = useMemo(() => compute(params, scenario), [params, scenario]);
+  const computed = useMemo(() => compute(params, scenario, hwFromComponents), [params, scenario, hwFromComponents]);
 
   useEffect(() => {
     loadPlansFromJson().then((loaded) => {
@@ -34,10 +35,10 @@ export default function App() {
   }, []);
 
   const handleSave = useCallback(async () => {
-    const json = JSON.stringify(buildConfigDocument(params, scenario, priceDisplay, activeParamTab), null, 2);
+    const json = JSON.stringify(buildConfigDocument(params, scenario, priceDisplay, activeParamTab, hwFromComponents), null, 2);
     await saveConfigToFile(json);
     flashSave('Saved');
-  }, [params, scenario, priceDisplay, activeParamTab, flashSave]);
+  }, [params, scenario, priceDisplay, activeParamTab, hwFromComponents, flashSave]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -60,6 +61,7 @@ export default function App() {
           if (ui.scenario) setScenario(ui.scenario);
           if (ui.priceDisplay) setPriceDisplay(ui.priceDisplay);
           if (ui.activeParamTab) setActiveParamTab(ui.activeParamTab);
+          if (ui.hwFromComponents !== undefined) setHwFromComponents(ui.hwFromComponents);
         } catch (err) {
           alert(`Could not load config: ${(err as Error).message || String(err)}`);
         }
@@ -94,6 +96,11 @@ export default function App() {
             params={params}
             scenario={scenario}
             activeTab={activeParamTab}
+            hwFromComponents={hwFromComponents}
+            onHwFromComponents={(enabled) => {
+              setHwFromComponents(enabled);
+              if (enabled) setActiveParamTab('hw_components');
+            }}
             onTab={setActiveParamTab}
             onParam={setParam}
           />

@@ -1,6 +1,7 @@
 import type { ComputeResult, ModelParams, Scenario } from '../types';
+import { effectiveHwUsd } from './hardwareCost';
 
-export function compute(params: ModelParams, scenario: Scenario): ComputeResult {
+export function compute(params: ModelParams, scenario: Scenario, hwFromComponents = false): ComputeResult {
   const P = params;
   let hw_landed_dzd: number;
   let monthly_hw: number;
@@ -9,7 +10,8 @@ export function compute(params: ModelParams, scenario: Scenario): ComputeResult 
     hw_landed_dzd = 2_000_000;
     monthly_hw = hw_landed_dzd / Math.min(P.amort_months, 36);
   } else {
-    hw_landed_dzd = P.hw_usd * (1 + P.customs_pct) * P.usd_dzd;
+    const hw_usd = effectiveHwUsd(P, hwFromComponents);
+    hw_landed_dzd = hw_usd * (1 + P.customs_pct) * P.usd_dzd;
     monthly_hw = hw_landed_dzd / P.amort_months;
   }
 

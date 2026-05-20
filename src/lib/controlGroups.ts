@@ -1,6 +1,11 @@
 import type { ControlGroup, Scenario } from '../types';
 
-export function getControlGroups(scenario: Scenario): ControlGroup[] {
+export interface ControlGroupOptions {
+  hwFromComponents?: boolean;
+}
+
+export function getControlGroups(scenario: Scenario, options: ControlGroupOptions = {}): ControlGroup[] {
+  const { hwFromComponents = false } = options;
   return [
     {
       id: 'fx',
@@ -14,11 +19,47 @@ export function getControlGroups(scenario: Scenario): ControlGroup[] {
     {
       id: 'hardware',
       title: 'Hardware & import',
-      desc: 'Phase 2 self-built servers. Hidden in Phase 1 (fixed 2M DZD AT box).',
+      desc: hwFromComponents
+        ? 'Import overhead on the component-estimated BOM. Enable “Estimate from components” to edit unit prices in the next tab.'
+        : 'Phase 2 self-built servers. Hidden in Phase 1 (fixed 2M DZD AT box).',
       show: () => scenario === 'p2',
       fields: [
-        { key: 'hw_usd', label: 'Server BOM (USD)', min: 1500, max: 10000, step: 100, unit: '$', tip: 'Total component cost per server before shipping and customs (CPU, RAM, NVMe, chassis, NIC).' },
-        { key: 'customs_pct', label: 'Import overhead', min: 0.15, max: 0.6, step: 0.01, fmt: (v) => `${Math.round(v * 100)}%`, tip: 'Extra % on top of BOM: duties, TVA, brokerage, shipping. Algeria IT imports often land around 30–45%.' },
+        ...(hwFromComponents
+          ? []
+          : [
+              {
+                key: 'hw_usd' as const,
+                label: 'Server hardware (USD)',
+                min: 1500,
+                max: 10000,
+                step: 100,
+                unit: '$',
+                tip: 'Total purchase cost per server before shipping and customs — used when component estimate is off.',
+              },
+            ]),
+        {
+          key: 'customs_pct',
+          label: 'Import overhead',
+          min: 0.15,
+          max: 0.6,
+          step: 0.01,
+          fmt: (v: number) => `${Math.round(v * 100)}%`,
+          tip: 'Extra % on top of hardware: duties, TVA, brokerage, shipping. Algeria IT imports often land around 30–45%.',
+        },
+      ],
+    },
+    {
+      id: 'hw_components',
+      title: 'Component pricing',
+      desc: 'Unit USD prices × quantities (sockets, RAM and NVMe from Host capacity). Totals feed hardware cost when estimate is enabled.',
+      show: () => scenario === 'p2' && hwFromComponents,
+      fields: [
+        { key: 'cpu_sockets', label: 'CPU sockets', min: 1, max: 4, step: 1, unit: 'socket', tip: 'Physical CPUs installed (1 = single-socket EPYC/Xeon, 2 = dual-socket).' },
+        { key: 'hw_usd_per_cpu_socket', label: 'Price per socket', min: 300, max: 5000, step: 50, unit: '$', tip: 'USD per CPU package (e.g. EPYC 7543P refurb ~$800–1,700 new).' },
+        { key: 'hw_usd_per_gib_ram', label: 'Price per GiB RAM', min: 1, max: 8, step: 0.1, fmt: (v) => v.toFixed(1), unit: '$/GiB', tip: 'Server ECC RDIMM — doc ballpark ~$50–80 per 32 GiB DIMM → about $1.6–2.5/GiB.' },
+        { key: 'hw_usd_per_tb_nvme', label: 'Price per TB NVMe', min: 50, max: 400, step: 5, unit: '$/TB', tip: 'Enterprise U.2 NVMe — doc ~$100–150/TB for 3.84 TB class drives.' },
+        { key: 'hw_usd_motherboard', label: 'Motherboard', min: 200, max: 2000, step: 50, unit: '$', tip: 'Server board with IPMI/BMC (e.g. Supermicro H12SSL-i ~$500–700).' },
+        { key: 'hw_usd_chassis_misc', label: 'Chassis, NIC & misc', min: 100, max: 2000, step: 50, unit: '$', tip: '2U chassis, redundant PSU, 10/25GbE NIC, rails, cables.' },
       ],
     },
     {
