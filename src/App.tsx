@@ -34,10 +34,10 @@ export default function App() {
   }, []);
 
   const handleSave = useCallback(async () => {
-    const json = JSON.stringify(buildConfigDocument(params, scenario, priceDisplay, activeParamTab, plans), null, 2);
+    const json = JSON.stringify(buildConfigDocument(params, scenario, priceDisplay, activeParamTab), null, 2);
     await saveConfigToFile(json);
     flashSave('Saved');
-  }, [params, scenario, priceDisplay, activeParamTab, plans, flashSave]);
+  }, [params, scenario, priceDisplay, activeParamTab, flashSave]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -56,7 +56,7 @@ export default function App() {
       reader.onload = () => {
         try {
           const data = JSON.parse(reader.result as string);
-          const ui = applyConfigDocument(data, setParams, setPlans);
+          const ui = applyConfigDocument(data, setParams);
           if (ui.scenario) setScenario(ui.scenario);
           if (ui.priceDisplay) setPriceDisplay(ui.priceDisplay);
           if (ui.activeParamTab) setActiveParamTab(ui.activeParamTab);
