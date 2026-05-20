@@ -173,29 +173,36 @@ function render(){
   `).join('');
 
   const vmEl = document.getElementById('vm-table-wrap');
+  const marginPct = Math.round(P.margin * 100);
   vmEl.innerHTML = `<table class="vm-table">
     <thead><tr>
       <th>Plan</th>
       <th style="text-align:right">Your price</th>
       <th style="text-align:right">Break-even</th>
-      <th style="text-align:right">Margin</th>
+      <th style="text-align:right">Target (+${marginPct}% margin)</th>
+      <th style="text-align:right">vs target</th>
     </tr></thead>
     <tbody>
     ${PLANS.map(pl=>{
       const scale = pl.ram / P.avg_vm_ram;
       const beUsd = (C.cost_per_paying_vm / usd) * scale;
-      const mgn = ((pl.monthly_usd - beUsd) / pl.monthly_usd * 100);
-      const cls = mgn > 30 ? 'pill-ok' : mgn > 0 ? 'pill-warn' : 'pill-bad';
-      const mgnLabel = mgn > 0 ? '+'+Math.round(mgn)+'%' : Math.round(mgn)+'%';
+      const targetUsd = beUsd / (1 - P.margin);
+      const mgn = ((pl.monthly_usd - targetUsd) / targetUsd * 100);
+      const cls = mgn >= 0 ? 'pill-ok' : mgn > -25 ? 'pill-warn' : 'pill-bad';
+      const mgnLabel = mgn >= 0 ? '+'+Math.round(mgn)+'%' : Math.round(mgn)+'%';
       return `<tr>
         <td style="color:var(--color-text-secondary)">${pl.label}</td>
         <td style="text-align:right">\$${pl.monthly_usd.toFixed(2)}</td>
         <td style="text-align:right">\$${beUsd.toFixed(2)}</td>
+        <td style="text-align:right">\$${targetUsd.toFixed(2)}</td>
         <td style="text-align:right"><span class="pill ${cls}">${mgnLabel}</span></td>
       </tr>`;
     }).join('')}
     </tbody>
-  </table>`;
+  </table>
+  <p style="font-size:11px;color:var(--color-text-secondary);margin-top:8px;line-height:1.4">
+    Break-even = full cost per paying VM (RAM-scaled). Target = break-even ÷ (1 − margin). “vs target” compares your listed price to the target, not to break-even.
+  </p>`;
 
   renderControls();
 }
