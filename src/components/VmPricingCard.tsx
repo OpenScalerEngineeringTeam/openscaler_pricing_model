@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { formatSuggestedUsd, roundNiceUsd } from '../lib/nicePricing';
+import { fleetMonthlyProfitDzd } from '../lib/fleetProfit';
 import { fmt, formatListed, formatModelPrice, planBreakEvenDzd, priceFootnote } from '../lib/pricing';
 import { generateProposedCatalog, smallestTierMaxPerServer } from '../lib/proposedCatalog';
 import {
@@ -34,6 +35,11 @@ export function VmPricingCard({ plans, params: P, computed: C, priceDisplay }: V
   const refTargetUsd = refTargetDzd / usd;
   const refBeMetric = priceDisplay === 'dzd' ? `${fmt(refBeDzd)} DZD` : `$${refBeUsd.toFixed(2)}`;
   const refTargetMetric = priceDisplay === 'dzd' ? `${fmt(refTargetDzd)} DZD` : `$${refTargetUsd.toFixed(2)}`;
+  const fleetProfitDzd = fleetMonthlyProfitDzd(P, C);
+  const fleetProfitUsd = fleetProfitDzd / usd;
+  const fleetProfitMetric =
+    priceDisplay === 'dzd' ? `${fmt(fleetProfitDzd)} DZD` : `$${fleetProfitUsd.toFixed(0)}`;
+  const fleetPayingSlots = Math.round(P.num_servers * C.paying_vms);
 
   const catalogSuggestions = useMemo(
     () =>
@@ -226,6 +232,13 @@ export function VmPricingCard({ plans, params: P, computed: C, priceDisplay }: V
         <div className="metric">
           <div className="metric-label">Target · {Math.round(P.margin * 100)}% margin</div>
           <div className={`metric-value${refTargetUsd > 8 ? ' warn' : ''}`}>{refTargetMetric}</div>
+        </div>
+        <div className="metric">
+          <div className="metric-label">Fleet profit / mo · target margin</div>
+          <div className="metric-value success">{fleetProfitMetric}</div>
+          <div className="metric-sub">
+            {P.num_servers} servers · {fleetPayingSlots} paying slots
+          </div>
         </div>
       </div>
     </div>
