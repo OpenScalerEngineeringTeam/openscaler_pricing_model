@@ -1,74 +1,110 @@
 
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:var(--font-sans);color:var(--color-text-primary)}
-.section{margin-bottom:1.5rem}
-.section-title{font-size:13px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.75rem}
-.params-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 20px}
-.param-row{display:flex;flex-direction:column;gap:4px}
-.param-label{font-size:12px;color:var(--color-text-secondary);display:flex;justify-content:space-between}
-.param-val{font-weight:500;color:var(--color-text-primary);font-size:12px}
-.metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1.5rem}
-.metric{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:.75rem 1rem}
-.metric-label{font-size:11px;color:var(--color-text-secondary);margin-bottom:4px}
-.metric-value{font-size:18px;font-weight:500;color:var(--color-text-primary)}
-.metric-value.danger{color:var(--color-text-danger)}
-.metric-value.success{color:var(--color-text-success)}
-.metric-value.warn{color:var(--color-text-warning)}
-.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:1.5rem}
-.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1rem}
-.vm-table{width:100%;font-size:12px;border-collapse:collapse}
-.vm-table th{font-weight:500;font-size:11px;color:var(--color-text-secondary);text-align:left;padding:4px 6px;border-bottom:0.5px solid var(--color-border-tertiary)}
-.vm-table td{padding:5px 6px;border-bottom:0.5px solid var(--color-border-tertiary)}
-.pill{font-size:10px;padding:2px 7px;border-radius:20px;font-weight:500}
+body{font-family:var(--font-sans,system-ui,-apple-system,sans-serif);color:var(--color-text-primary,#1a1a1a);line-height:1.4}
+.section{margin-bottom:1.25rem}
+.section-title{font-size:11px;font-weight:600;color:var(--color-text-secondary,#666);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.65rem}
+.toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:.6rem .85rem;background:var(--color-background-secondary,#f5f5f4);border:0.5px solid var(--color-border-tertiary,#e5e5e0);border-radius:10px;margin-bottom:.85rem}
+.toolbar-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.metrics-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:.75rem}
+.metric{background:var(--color-background-secondary,#f5f5f4);border:0.5px solid var(--color-border-tertiary,#e8e8e3);border-radius:8px;padding:.45rem .55rem}
+.metric-label{font-size:9px;color:var(--color-text-secondary,#666);margin-bottom:2px;line-height:1.25}
+.metric-value{font-size:14px;font-weight:600;color:var(--color-text-primary);font-variant-numeric:tabular-nums;line-height:1.2}
+.metric-value.danger{color:var(--color-text-danger,#b42318)}
+.metric-value.success{color:var(--color-text-success,#3b6d11)}
+.metric-value.warn{color:var(--color-text-warning,#854f0b)}
+.metric-sub{font-size:9px;color:var(--color-text-secondary,#888);margin-top:2px;font-variant-numeric:tabular-nums;line-height:1.25}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+@media(max-width:960px){.two-col{grid-template-columns:1fr}}
+.card{background:var(--color-background-primary,#fff);border:0.5px solid var(--color-border-tertiary,#e5e5e0);border-radius:12px;padding:.95rem 1rem;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.params-tabs-section{margin-top:1rem;padding-top:1rem;border-top:0.5px solid var(--color-border-tertiary,#eee)}
+.params-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:.85rem}
+.param-tab{font-size:11px;padding:5px 10px;border:0.5px solid var(--color-border-secondary,#ccc);border-radius:8px;background:var(--color-background-primary,#fff);cursor:pointer;color:var(--color-text-secondary);font-weight:500;transition:background .15s,color .15s,border-color .15s}
+.param-tab:hover:not(.active){background:var(--color-background-secondary,#f0f0eb)}
+.param-tab.active{background:var(--color-text-primary,#1a1a1a);color:var(--color-background-primary,#fff);border-color:var(--color-text-primary,#1a1a1a)}
+.params-panel{min-height:180px}
+.params-footnote{font-size:11px;color:var(--color-text-secondary);margin-top:.75rem;line-height:1.45}
+.vm-table-wrap{max-height:min(340px,42vh);overflow:auto;border-radius:8px;border:0.5px solid var(--color-border-tertiary,#eee)}
+.footnote--vm{margin-top:6px;padding-top:6px;font-size:10px;line-height:1.35}
+.vm-table{width:100%;font-size:11px;border-collapse:collapse}
+.vm-table th{font-weight:600;font-size:10px;color:var(--color-text-secondary);text-align:left;padding:6px 8px;border-bottom:0.5px solid var(--color-border-tertiary);position:sticky;top:0;background:var(--color-background-primary,#fff);z-index:1}
+.vm-table tbody tr:hover td{background:var(--color-background-secondary,#fafaf8)}
+.vm-table td{padding:6px 8px;border-bottom:0.5px solid var(--color-border-tertiary,#f0f0eb)}
+.vm-table .plan-id{font-size:10px;color:var(--color-text-tertiary,#999)}
+.vm-table .price-sub{display:block;font-size:10px;color:var(--color-text-secondary);margin-top:2px;font-variant-numeric:tabular-nums}
+.price-display-wrap{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--color-text-secondary)}
+.price-display-wrap select{font-size:12px;padding:5px 10px;border:0.5px solid var(--color-border-secondary,#ccc);border-radius:8px;background:var(--color-background-primary,#fff);color:var(--color-text-primary);cursor:pointer}
+.pill{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600}
 .pill-ok{background:#EAF3DE;color:#3B6D11}
 .pill-warn{background:#FAEEDA;color:#854F0B}
 .pill-bad{background:#FCEBEB;color:#A32D2D}
-.tabs{display:flex;gap:8px;margin-bottom:1rem}
-.tab{font-size:12px;padding:4px 12px;border:0.5px solid var(--color-border-secondary);border-radius:20px;background:transparent;cursor:pointer;color:var(--color-text-secondary)}
-.tab.active{background:var(--color-text-primary);color:var(--color-background-primary);border-color:transparent}
-.breakdown-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px}
-.breakdown-bar-wrap{flex:1;height:8px;background:var(--color-background-secondary);border-radius:4px;overflow:hidden}
-.breakdown-bar{height:100%;border-radius:4px}
-.breakdown-name{width:100px;color:var(--color-text-secondary)}
-.breakdown-pct{width:36px;text-align:right;color:var(--color-text-secondary);font-variant-numeric:tabular-nums}
-.breakdown-val{width:85px;text-align:right;font-variant-numeric:tabular-nums;color:var(--color-text-primary)}
-.scenario-toggle{display:flex;gap:0;margin-bottom:1rem;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);overflow:hidden;width:fit-content}
-.sc-btn{font-size:12px;padding:5px 14px;border:none;background:transparent;cursor:pointer;color:var(--color-text-secondary)}
-.sc-btn.active{background:var(--color-text-primary);color:var(--color-background-primary)}
-input[type=range]{width:100%}
+.breakdown-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;font-size:12px}
+.breakdown-bar-wrap{flex:1;height:9px;background:var(--color-background-secondary,#eee);border-radius:5px;overflow:hidden}
+.breakdown-bar{height:100%;border-radius:5px;min-width:2px}
+.breakdown-name{width:92px;color:var(--color-text-secondary);font-size:11px}
+.breakdown-pct{width:36px;text-align:right;color:var(--color-text-secondary);font-variant-numeric:tabular-nums;font-size:11px}
+.breakdown-val{width:88px;text-align:right;font-variant-numeric:tabular-nums;font-weight:500}
+.scenario-toggle{display:flex;border:0.5px solid var(--color-border-secondary,#ccc);border-radius:8px;overflow:hidden;background:var(--color-background-primary,#fff)}
+.sc-btn{font-size:12px;padding:6px 14px;border:none;background:transparent;cursor:pointer;color:var(--color-text-secondary);font-weight:500;transition:background .15s,color .15s}
+.sc-btn:hover:not(.active){background:var(--color-background-secondary,#f0f0eb)}
+.sc-btn.active{background:var(--color-text-primary,#1a1a1a);color:var(--color-background-primary,#fff)}
+.param-group{background:var(--color-background-secondary,#f8f8f6);border:0.5px solid var(--color-border-tertiary,#e8e8e3);border-radius:10px;padding:.85rem .95rem 1rem}
+.param-group-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-secondary,#555);margin-bottom:2px}
+.param-group-desc{font-size:11px;color:var(--color-text-tertiary,#888);margin-bottom:.65rem;line-height:1.35}
+.param-group-fields{display:flex;flex-direction:column;gap:10px}
+.param-row{display:flex;flex-direction:column;gap:5px}
+.param-label{font-size:12px;color:var(--color-text-primary,#333);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.param-label-text{display:flex;align-items:center;gap:5px;min-width:0}
+.param-val{font-weight:600;color:var(--color-text-primary);font-size:12px;font-variant-numeric:tabular-nums;flex-shrink:0}
+input[type=range]{width:100%;height:6px;accent-color:#378ADD;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{cursor:pointer}
+.tip-wrap{position:relative;display:inline-flex;flex-shrink:0}
+.tip-btn{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;font-size:10px;font-weight:700;line-height:1;color:var(--color-text-secondary,#666);background:var(--color-background-primary,#fff);border:0.5px solid var(--color-border-secondary,#ccc);cursor:help}
+.tip-btn:hover,.tip-btn:focus{color:var(--color-text-primary);border-color:#378ADD;outline:none}
+.tip-popup{position:absolute;left:50%;bottom:calc(100% + 6px);transform:translateX(-50%);width:max-content;max-width:240px;padding:8px 10px;font-size:11px;font-weight:400;line-height:1.4;color:#fff;background:#2a2a2a;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.18);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .15s,visibility .15s;z-index:20;text-align:left}
+.tip-popup::after{content:'';position:absolute;top:100%;left:50%;margin-left:-5px;border:5px solid transparent;border-top-color:#2a2a2a}
+.tip-wrap:hover .tip-popup,.tip-wrap:focus-within .tip-popup{opacity:1;visibility:visible}
+.footnote{font-size:11px;color:var(--color-text-secondary);margin-top:10px;line-height:1.45;padding-top:8px;border-top:0.5px solid var(--color-border-tertiary,#eee)}
 </style>
 
 <h2 class="sr-only">OpenScaler cloud cost estimator — monthly per-server cost breakdown and VM pricing model</h2>
 
-<div style="padding:.5rem 0">
+<div style="padding:.25rem 0">
 
-<div class="section">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
-    <span class="section-title" style="margin-bottom:0">Scenario</span>
-    <div class="scenario-toggle">
-      <button class="sc-btn active" id="sc-p2" onclick="setScenario('p2')">Phase 2 — self-assembled</button>
-      <button class="sc-btn" id="sc-p1" onclick="setScenario('p1')">Phase 1 — AT hardware</button>
+<div class="toolbar">
+  <div class="scenario-toggle">
+    <button class="sc-btn active" id="sc-p2" onclick="setScenario('p2')">Phase 2 — self-assembled</button>
+    <button class="sc-btn" id="sc-p1" onclick="setScenario('p1')">Phase 1 — AT hardware</button>
+  </div>
+  <div class="toolbar-actions">
+    <div class="price-display-wrap">
+      <label for="price-display">Price display</label>
+      <select id="price-display" onchange="priceDisplay=this.value;render()">
+        <option value="usd">USD only</option>
+        <option value="both" selected>USD + client DZD</option>
+        <option value="dzd">DZD only</option>
+      </select>
     </div>
   </div>
 </div>
-
-<div class="metrics-grid" id="metrics"></div>
 
 <div class="two-col">
   <div class="card">
     <div class="section-title">Cost breakdown / server / month</div>
     <div id="breakdown"></div>
+    <div class="params-tabs-section">
+      <div class="section-title" style="margin-bottom:.5rem">Model parameters</div>
+      <div class="params-tabs" id="param-tabs" role="tablist" aria-label="Model parameter categories"></div>
+      <div class="params-panel" id="controls" role="tabpanel"></div>
+      <p class="params-footnote">Hover the <span class="tip-btn" style="cursor:default;vertical-align:middle">?</span> on each field for a short explanation.</p>
+    </div>
   </div>
   <div class="card">
-    <div class="section-title">VM pricing vs your plans</div>
-    <div id="vm-table-wrap"></div>
+    <div class="section-title">VM pricing vs catalog (<span id="plan-count">11</span> plans)</div>
+    <div class="vm-table-wrap" id="vm-table-wrap"></div>
+    <p class="footnote footnote--vm" id="vm-footnote"></p>
+    <div class="metrics-grid" id="metrics"></div>
   </div>
-</div>
-
-<div class="card">
-  <div class="section-title">Parameters</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px 24px" id="controls"></div>
 </div>
 
 </div>
@@ -76,6 +112,7 @@ input[type=range]{width:100%}
 <script>
 const P = {
   usd_dzd: 135,
+  price_usd_dzd: 240,
   hw_usd: 4000,
   customs_pct: 0.35,
   amort_months: 48,
@@ -93,27 +130,73 @@ const P = {
   cpu_oversub: 4,
   ram_gb: 128,
   ram_oversub: 1.2,
+  nvme_tb_per_server: 4,
+  disk_dzd_per_gb_mo: 3,
+  transfer_dzd_per_tb_mo: 150,
   avg_vm_ram: 2,
+  avg_vm_vcpu: 2,
+  avg_vm_disk_gb: 40,
+  avg_vm_transfer_tb: 4,
   utilization: 0.70,
   margin: 0.40,
 };
 
 let scenario = 'p2';
+let priceDisplay = 'both';
+let activeParamTab = 'fx';
 
-const PLANS = [
-  {label:'Micro (0.5GiB/1vCPU)', monthly_usd:1.50, ram:0.5},
-  {label:'Starter (1GiB/1vCPU)', monthly_usd:2.50, ram:1},
-  {label:'Basic (2GiB/1vCPU)', monthly_usd:3.50, ram:2},
-  {label:'Standard (4GiB/2vCPU)', monthly_usd:7.50, ram:4},
-  {label:'Growth (8GiB/4vCPU)', monthly_usd:15.00, ram:8},
-  {label:'Pro (16GiB/8vCPU)', monthly_usd:25.00, ram:16},
+function usdToClientDzd(usd){ return usd * P.price_usd_dzd; }
+function listedDzd(pl){ return pl.monthly_usd * P.price_usd_dzd; }
+
+function planBreakEvenDzd(pl, C){
+  const computeScale = Math.max(pl.memory / P.avg_vm_ram, pl.vcpus / P.avg_vm_vcpu);
+  return C.compute_cost_per_paying_vm * computeScale
+    + pl.disk * C.storage_per_gb_mo
+    + pl.transfer * C.transfer_per_tb_mo;
+}
+
+function priceCellListed(pl){
+  if(priceDisplay === 'dzd') return `${fmt(listedDzd(pl))} DZD`;
+  const usd = pl.monthly_usd;
+  if(priceDisplay === 'both'){
+    return `\$${usd.toFixed(2)}<span class="price-sub">${fmt(listedDzd(pl))} DZD</span>`;
+  }
+  return `\$${usd.toFixed(2)}`;
+}
+
+function priceCellModel(dzd, usd, opts){
+  if(priceDisplay === 'dzd'){
+    const main = `${fmt(dzd)} DZD`;
+    if(opts && opts.hint === 'cost') return `${main}<span class="price-sub">cost basis</span>`;
+    return main;
+  }
+  const lines = [`\$${usd.toFixed(2)}`];
+  if(priceDisplay === 'both'){
+    if(opts && opts.costDzd) lines.push(`<span class="price-sub">${fmt(dzd)} DZD cost</span>`);
+    lines.push(`<span class="price-sub">${fmt(usdToClientDzd(usd))} DZD client</span>`);
+  }
+  return lines.join('');
+}
+
+/** Synced from pricing_placeholders.json — refreshed on load when served over HTTP */
+let PLANS = [
+  {id:'b-1-500mb-10', name:'Basic 1-500mb-25GB', memory:0.5, vcpus:1, disk:10, transfer:0.5, units:1, monthly_usd:1.50},
+  {id:'s-1vcpu-1gb', name:'Basic 1-1-25GB', memory:1, vcpus:1, disk:15, transfer:1, units:1, monthly_usd:2.50},
+  {id:'b-1-2-50', name:'Basic 1-2-50GB', memory:2, vcpus:1, disk:20, transfer:2, units:2, monthly_usd:3.50},
+  {id:'b-2-4-100', name:'Basic 2-4-100GB', memory:4, vcpus:2, disk:40, transfer:4, units:4, monthly_usd:7.50},
+  {id:'b-4-8-160', name:'Basic 4-8-160GB', memory:8, vcpus:4, disk:80, transfer:8, units:8, monthly_usd:15.00},
+  {id:'b-8-16-320', name:'Basic 8-16-320GB', memory:16, vcpus:8, disk:160, transfer:16, units:16, monthly_usd:25.00},
+  {id:'b-8-32-640', name:'Basic 8-32-640GB', memory:32, vcpus:8, disk:640, transfer:34, units:34, monthly_usd:35.00},
+  {id:'b-16-32-640', name:'Basic 16-32-640GB', memory:32, vcpus:16, disk:320, transfer:34, units:34, monthly_usd:60.00},
+  {id:'b-16-64-1280', name:'Basic 16-64-1280GB', memory:64, vcpus:16, disk:640, transfer:68, units:64, monthly_usd:98.00},
+  {id:'b-32-64-1280', name:'Basic 32-64-1280GB', memory:64, vcpus:32, disk:640, transfer:68, units:64, monthly_usd:175.00},
+  {id:'b-32-128-2560', name:'Basic 32-128-2560GB', memory:128, vcpus:32, disk:1280, transfer:136, units:128, monthly_usd:320.00},
 ];
 
-const BAR_COLORS = ['#378ADD','#1D9E75','#D85A30','#BA7517','#7F77DD','#D4537E'];
-const BAR_LABELS = ['Hardware','Power','Rack','Bandwidth','Team','Misc'];
+const BAR_COLORS = ['#378ADD','#1D9E75','#D85A30','#BA7517','#7F77DD','#D4537E','#888'];
+const BAR_LABELS = ['Hardware','Power','Rack','Transit (pipe)','Storage (NVMe)','Team','Misc'];
 
 function fmt(n){return Math.round(n).toLocaleString()}
-function fmtK(n){return n>=1000?(n/1000).toFixed(1)+'k':Math.round(n).toString()}
 
 function compute(){
   let hw_landed_dzd, monthly_hw;
@@ -127,43 +210,105 @@ function compute(){
 
   const monthly_power = P.server_w * P.pue * 720 / 1000 * P.power_dzd_kwh;
   const monthly_rack = P.rack_per_u_dzd * P.rack_u;
-  const monthly_bw = (P.bw_mbps / Math.max(P.num_servers,1)) * P.bw_dzd_mbps;
-  const monthly_team = (P.team_people * P.salary_dzd) / Math.max(P.num_servers,1);
-  const monthly_misc = (hw_landed_dzd * 0.05 / 12) + 2000;
-  const total = monthly_hw + monthly_power + monthly_rack + monthly_bw + monthly_team + monthly_misc;
+  const monthly_bw = (P.bw_mbps / Math.max(P.num_servers, 1)) * P.bw_dzd_mbps;
+  const monthly_storage = P.nvme_tb_per_server * 1024 * P.disk_dzd_per_gb_mo;
 
   const sellable_by_ram = (P.ram_gb / P.ram_oversub) / P.avg_vm_ram;
-  const sellable_by_cpu = P.cpu_cores * P.cpu_oversub / 1;
-  const sellable_vms = Math.floor(Math.min(sellable_by_ram, sellable_by_cpu));
+  const sellable_by_cpu = P.cpu_cores * P.cpu_oversub / Math.max(P.avg_vm_vcpu, 0.5);
+  const sellable_by_disk = (P.nvme_tb_per_server * 1024) / Math.max(P.avg_vm_disk_gb, 1);
+  const sellable_vms = Math.floor(Math.min(sellable_by_ram, sellable_by_cpu, sellable_by_disk));
   const paying_vms = sellable_vms * P.utilization;
+
+  const monthly_team = (P.team_people * P.salary_dzd) / Math.max(P.num_servers, 1);
+  const monthly_misc = (hw_landed_dzd * 0.05 / 12) + 2000;
+  const monthly_compute = monthly_hw + monthly_power + monthly_rack + monthly_bw + monthly_team + monthly_misc;
+  const total = monthly_compute + monthly_storage;
+  const compute_cost_per_paying_vm = paying_vms > 0 ? monthly_compute / paying_vms : 999999;
+
   const cost_per_paying_vm = paying_vms > 0 ? total / paying_vms : 999999;
   const min_price_vm = cost_per_paying_vm / (1 - P.margin);
+  const storage_per_gb_mo = P.disk_dzd_per_gb_mo;
+  const transfer_per_tb_mo = P.transfer_dzd_per_tb_mo;
+
+  const binding = [
+    ['RAM', sellable_by_ram],
+    ['CPU', sellable_by_cpu],
+    ['Disk', sellable_by_disk],
+  ].sort((a, b) => a[1] - b[1])[0][0];
 
   return {
-    monthly_hw, monthly_power, monthly_rack, monthly_bw, monthly_team, monthly_misc,
-    total, sellable_vms, paying_vms, cost_per_paying_vm, min_price_vm,
-    hw_landed_dzd
+    monthly_hw, monthly_power, monthly_rack, monthly_bw, monthly_storage,
+    monthly_team, monthly_misc, monthly_compute, total, sellable_vms, paying_vms,
+    cost_per_paying_vm, compute_cost_per_paying_vm, min_price_vm,
+    hw_landed_dzd, binding, sellable_by_ram, sellable_by_cpu, sellable_by_disk,
+    storage_per_gb_mo, transfer_per_tb_mo,
   };
+}
+
+/** Break-even $/mo: scaled compute slot + provisioned disk + included transfer. */
+function planBreakEvenUsd(pl, C, usd){
+  const computeScale = Math.max(
+    pl.memory / P.avg_vm_ram,
+    pl.vcpus / P.avg_vm_vcpu,
+  );
+  const computeUsd = (C.compute_cost_per_paying_vm / usd) * computeScale;
+  const diskUsd = pl.disk * C.storage_per_gb_mo / usd;
+  const transferUsd = pl.transfer * C.transfer_per_tb_mo / usd;
+  return computeUsd + diskUsd + transferUsd;
+}
+
+function priceFootnote(){
+  if(priceDisplay === 'dzd'){
+    return `DZD-only view. <strong>Listed</strong> = catalog \$ × client FX (${P.price_usd_dzd}). <strong>Break-even &amp; target</strong> = native DZD from the cost model (no \$ round-trip). <strong>vs target</strong> compares those two DZD figures.`;
+  }
+  if(priceDisplay === 'both'){
+    return `USD + DZD. Model costs @ <strong>cost FX</strong> ${P.usd_dzd}. Client DZD on \$ amounts @ <strong>client FX</strong> ${P.price_usd_dzd}. Break-even shows cost DZD + client DZD.`;
+  }
+  return `USD only. Internal costs converted at <strong>cost FX</strong> ${P.usd_dzd} DZD/\$. Switch to DZD only to drop \$ and avoid client FX on break-even/target.`;
 }
 
 function render(){
   const C = compute();
   const usd = P.usd_dzd;
 
+  document.getElementById('plan-count').textContent = PLANS.length;
+
+  const refPlan = {
+    memory: P.avg_vm_ram, vcpus: P.avg_vm_vcpu,
+    disk: P.avg_vm_disk_gb, transfer: P.avg_vm_transfer_tb,
+  };
+  const refBeDzd = planBreakEvenDzd(refPlan, C);
+  const refTargetDzd = refBeDzd / (1 - P.margin);
+  const refBeUsd = refBeDzd / usd;
+  const refTargetUsd = refTargetDzd / usd;
+
+  const refBeMetric = priceDisplay === 'dzd'
+    ? `${fmt(refBeDzd)} DZD`
+    : `$${refBeUsd.toFixed(2)}`;
+  const refTargetMetric = priceDisplay === 'dzd'
+    ? `${fmt(refTargetDzd)} DZD`
+    : `$${refTargetUsd.toFixed(2)}`;
+  const refBeSub = priceDisplay === 'both'
+    ? `<div class="metric-sub">${fmt(refBeDzd)} DZD cost · ${fmt(usdToClientDzd(refBeUsd))} client</div>`
+    : priceDisplay === 'usd' ? '' : `<div class="metric-sub">native cost (no \$ conversion)</div>`;
+  const refTargetSub = priceDisplay === 'both'
+    ? `<div class="metric-sub">${fmt(refTargetDzd)} DZD cost · ${fmt(usdToClientDzd(refTargetUsd))} client</div>`
+    : priceDisplay === 'usd' ? '' : '';
+
   const metricsEl = document.getElementById('metrics');
-  const totalUsd = C.total / usd;
-  const breakEvenUsd = C.min_price_vm / usd;
   metricsEl.innerHTML = `
-    <div class="metric"><div class="metric-label">Total cost / server / mo</div><div class="metric-value">${fmt(C.total)} DZD</div></div>
-    <div class="metric"><div class="metric-label">VM slots (at ${Math.round(P.utilization*100)}% util)</div><div class="metric-value">${Math.round(C.paying_vms)} / ${C.sellable_vms}</div></div>
-    <div class="metric"><div class="metric-label">Break-even price / VM</div><div class="metric-value ${C.cost_per_paying_vm/usd>5?'danger':'success'}">\$${(C.cost_per_paying_vm/usd).toFixed(2)}</div></div>
-    <div class="metric"><div class="metric-label">Min sale price / VM (${Math.round(P.margin*100)}% margin)</div><div class="metric-value ${C.min_price_vm/usd>8?'warn':''}">\$${(C.min_price_vm/usd).toFixed(2)}</div></div>
+    <div class="metric"><div class="metric-label">Cost / server / mo</div><div class="metric-value">${fmt(C.total)} DZD</div><div class="metric-sub">FX ${P.usd_dzd}</div></div>
+    <div class="metric"><div class="metric-label">VM slots · ${Math.round(P.utilization*100)}% · ${C.binding}</div><div class="metric-value">${Math.round(C.paying_vms)} / ${C.sellable_vms}</div></div>
+    <div class="metric"><div class="metric-label">Break-even · ${P.avg_vm_ram}G/${P.avg_vm_vcpu}c/${P.avg_vm_disk_gb}G/${P.avg_vm_transfer_tb}T</div><div class="metric-value ${refBeUsd>5?'danger':'success'}">${refBeMetric}</div>${refBeSub}</div>
+    <div class="metric"><div class="metric-label">Target · ${Math.round(P.margin*100)}% margin</div><div class="metric-value ${refTargetUsd>8?'warn':''}">${refTargetMetric}</div>${refTargetSub}</div>
   `;
 
-  const costs = [C.monthly_hw, C.monthly_power, C.monthly_rack, C.monthly_bw, C.monthly_team, C.monthly_misc];
-  const pcts = costs.map(c => c/C.total*100);
-  const breakEl = document.getElementById('breakdown');
-  breakEl.innerHTML = costs.map((c,i)=>`
+  const costs = [
+    C.monthly_hw, C.monthly_power, C.monthly_rack, C.monthly_bw,
+    C.monthly_storage, C.monthly_team, C.monthly_misc,
+  ];
+  const pcts = costs.map(c => c / C.total * 100);
+  document.getElementById('breakdown').innerHTML = costs.map((c, i) => `
     <div class="breakdown-row">
       <span class="breakdown-name">${BAR_LABELS[i]}</span>
       <div class="breakdown-bar-wrap"><div class="breakdown-bar" style="width:${Math.round(pcts[i])}%;background:${BAR_COLORS[i]}"></div></div>
@@ -172,84 +317,243 @@ function render(){
     </div>
   `).join('');
 
-  const vmEl = document.getElementById('vm-table-wrap');
   const marginPct = Math.round(P.margin * 100);
+  const vmEl = document.getElementById('vm-table-wrap');
   vmEl.innerHTML = `<table class="vm-table">
     <thead><tr>
       <th>Plan</th>
-      <th style="text-align:right">Your price</th>
+      <th>Spec</th>
+      <th style="text-align:right">Listed</th>
       <th style="text-align:right">Break-even</th>
-      <th style="text-align:right">Target (+${marginPct}% margin)</th>
+      <th style="text-align:right">Target (+${marginPct}%)</th>
       <th style="text-align:right">vs target</th>
     </tr></thead>
     <tbody>
-    ${PLANS.map(pl=>{
-      const scale = pl.ram / P.avg_vm_ram;
-      const beUsd = (C.cost_per_paying_vm / usd) * scale;
-      const targetUsd = beUsd / (1 - P.margin);
-      const mgn = ((pl.monthly_usd - targetUsd) / targetUsd * 100);
+    ${PLANS.map(pl => {
+      const beDzd = planBreakEvenDzd(pl, C);
+      const targetDzd = beDzd / (1 - P.margin);
+      const beUsd = beDzd / usd;
+      const targetUsd = targetDzd / usd;
+      const listedVal = priceDisplay === 'dzd' ? listedDzd(pl) : pl.monthly_usd;
+      const targetVal = priceDisplay === 'dzd' ? targetDzd : targetUsd;
+      const mgn = ((listedVal - targetVal) / targetVal * 100);
       const cls = mgn >= 0 ? 'pill-ok' : mgn > -25 ? 'pill-warn' : 'pill-bad';
-      const mgnLabel = mgn >= 0 ? '+'+Math.round(mgn)+'%' : Math.round(mgn)+'%';
+      const mgnLabel = mgn >= 0 ? '+' + Math.round(mgn) + '%' : Math.round(mgn) + '%';
+      const spec = `${pl.vcpus}c · ${pl.memory}G · ${pl.disk}G · ${pl.transfer}T`;
       return `<tr>
-        <td style="color:var(--color-text-secondary)">${pl.label}</td>
-        <td style="text-align:right">\$${pl.monthly_usd.toFixed(2)}</td>
-        <td style="text-align:right">\$${beUsd.toFixed(2)}</td>
-        <td style="text-align:right">\$${targetUsd.toFixed(2)}</td>
+        <td><div>${pl.name}</div><div class="plan-id">${pl.id}</div></td>
+        <td style="color:var(--color-text-secondary)">${spec}</td>
+        <td style="text-align:right">${priceCellListed(pl)}</td>
+        <td style="text-align:right">${priceCellModel(beDzd, beUsd, {costDzd: true, hint: 'cost'})}</td>
+        <td style="text-align:right">${priceCellModel(targetDzd, targetUsd)}</td>
         <td style="text-align:right"><span class="pill ${cls}">${mgnLabel}</span></td>
       </tr>`;
     }).join('')}
     </tbody>
-  </table>
-  <p style="font-size:11px;color:var(--color-text-secondary);margin-top:8px;line-height:1.4">
-    Break-even = full cost per paying VM (RAM-scaled). Target = break-even ÷ (1 − margin). “vs target” compares your listed price to the target, not to break-even.
-  </p>`;
+  </table>`;
+  document.getElementById('vm-footnote').innerHTML = priceFootnote();
+
+  document.getElementById('price-display').value = priceDisplay;
 
   renderControls();
 }
 
-const CONTROLS = [
-  {key:'hw_usd', label:'Server components (USD)', min:1500, max:10000, step:100, unit:'$', show:()=>scenario==='p2'},
-  {key:'customs_pct', label:'Import overhead', min:0.15, max:0.60, step:0.01, fmt:v=>Math.round(v*100)+'%', show:()=>scenario==='p2'},
-  {key:'amort_months', label:'Amortization (months)', min:24, max:72, step:6, unit:'mo'},
-  {key:'usd_dzd', label:'USD/DZD rate', min:100, max:200, step:1, unit:'DZD'},
-  {key:'server_w', label:'Server TDP (W)', min:100, max:600, step:10, unit:'W'},
-  {key:'pue', label:'PUE', min:1.1, max:2.0, step:0.05, fmt:v=>v.toFixed(2)},
-  {key:'rack_per_u_dzd', label:'Rack cost per U/mo (DZD)', min:500, max:15000, step:500, unit:'DZD'},
-  {key:'bw_dzd_mbps', label:'AT bandwidth (DZD/Mbps)', min:0.5, max:30, step:0.5, fmt:v=>v.toFixed(1)},
-  {key:'bw_mbps', label:'Committed bandwidth (Mbps)', min:100, max:10000, step:100, unit:'Mbps'},
-  {key:'num_servers', label:'Fleet size (servers)', min:2, max:200, step:1, unit:''},
-  {key:'team_people', label:'Ops team headcount', min:1, max:10, step:1, unit:''},
-  {key:'salary_dzd', label:'Salary per person (DZD)', min:50000, max:400000, step:10000, unit:'DZD'},
-  {key:'cpu_cores', label:'Cores per server', min:8, max:96, step:4, unit:'c'},
-  {key:'cpu_oversub', label:'CPU oversubscription', min:1, max:10, step:0.5, fmt:v=>v.toFixed(1)+'×'},
-  {key:'ram_gb', label:'RAM per server (GB)', min:32, max:512, step:16, unit:'GB'},
-  {key:'avg_vm_ram', label:'Avg VM RAM (GiB)', min:0.5, max:8, step:0.5, fmt:v=>v.toFixed(1)},
-  {key:'utilization', label:'Target utilization', min:0.30, max:0.95, step:0.05, fmt:v=>Math.round(v*100)+'%'},
-  {key:'margin', label:'Target gross margin', min:0.10, max:0.70, step:0.05, fmt:v=>Math.round(v*100)+'%'},
+const CONTROL_GROUPS = [
+  {
+    id: 'fx',
+    title: 'Exchange rates',
+    desc: 'Two rates: one for your real costs, one for how customers read $ prices.',
+    fields: [
+      {key:'usd_dzd', label:'Cost FX (official / import)', min:100, max:200, step:1, unit:'DZD/$',
+        tip:'DZD per USD for hardware imports, amortization, and internal cost math. Use bank or customs rate, not street rate.'},
+      {key:'price_usd_dzd', label:'Client FX (retail / parallel)', min:135, max:350, step:5, unit:'DZD/$',
+        tip:'DZD per USD when converting listed $ prices for customers. Often higher (e.g. ~240) — what people apply when they hear “$5/month”.'},
+      {key:'amort_months', label:'Hardware amortization', min:24, max:72, step:6, unit:'mo',
+        tip:'Months to spread server purchase cost. Phase 1 caps at 36 mo. Longer = lower monthly hardware line.'},
+    ],
+  },
+  {
+    id: 'hardware',
+    title: 'Hardware & import',
+    desc: 'Phase 2 self-built servers. Hidden in Phase 1 (fixed 2M DZD AT box).',
+    show: () => scenario === 'p2',
+    fields: [
+      {key:'hw_usd', label:'Server BOM (USD)', min:1500, max:10000, step:100, unit:'$',
+        tip:'Total component cost per server before shipping and customs (CPU, RAM, NVMe, chassis, NIC).'},
+      {key:'customs_pct', label:'Import overhead', min:0.15, max:0.60, step:0.01, fmt:v=>Math.round(v*100)+'%',
+        tip:'Extra % on top of BOM: duties, TVA, brokerage, shipping. Algeria IT imports often land around 30–45%.'},
+    ],
+  },
+  {
+    id: 'host',
+    title: 'Host capacity',
+    desc: 'Physical limits and oversubscription — how many VMs fit per machine.',
+    fields: [
+      {key:'cpu_cores', label:'Physical cores', min:8, max:96, step:4, unit:'c',
+        tip:'Real CPU cores per host (not threads). Example: 24-core single-socket EPYC.'},
+      {key:'cpu_oversub', label:'CPU oversubscription', min:1, max:10, step:0.5, fmt:v=>v.toFixed(1)+'×',
+        tip:'vCPUs sold per physical core. 4× means 24 cores → 96 sellable vCPUs. Higher = more revenue risk if all VMs load CPU.'},
+      {key:'ram_gb', label:'RAM per server', min:32, max:512, step:16, unit:'GB',
+        tip:'Installed ECC RAM per host. Often the binding constraint for VM count.'},
+      {key:'ram_oversub', label:'RAM oversubscription', min:1, max:2, step:0.05, fmt:v=>v.toFixed(2)+'×',
+        tip:'Sell slightly more RAM than installed (1.0 = none). >1.2 is aggressive; hypervisor overhead already eats margin.'},
+      {key:'nvme_tb_per_server', label:'NVMe capacity', min:1, max:32, step:1, unit:'TB',
+        tip:'Total fast storage installed per host. Caps how much disk you can provision across VMs.'},
+      {key:'server_w', label:'Server TDP', min:100, max:600, step:10, unit:'W',
+        tip:'Thermal design power (watts) at full CPU load — used to estimate electricity per server.'},
+      {key:'pue', label:'PUE', min:1.1, max:2.0, step:0.05, fmt:v=>v.toFixed(2),
+        tip:'Power Usage Effectiveness: datacenter draws PUE × server power (cooling, UPS, losses). 1.3–1.5 typical.'},
+    ],
+  },
+  {
+    id: 'infra',
+    title: 'Colocation & network',
+    desc: 'What Algérie Télécom / DC charges monthly.',
+    fields: [
+      {key:'rack_per_u_dzd', label:'Rack per U / month', min:500, max:15000, step:500, unit:'DZD',
+        tip:'Colocation rent per rack unit per month. This model assumes 2U per server (see rack_u in code).'},
+      {key:'bw_mbps', label:'Committed bandwidth', min:100, max:10000, step:100, unit:'Mbps',
+        tip:'Total Mbps you buy for the fleet (international/transit pipe). Cost is split across all servers.'},
+      {key:'bw_dzd_mbps', label:'Transit price', min:0.5, max:30, step:0.5, unit:'DZD/Mbps',
+        tip:'AT (or upstream) price per Mbps per month for the committed pipe — not per-VM egress.'},
+    ],
+  },
+  {
+    id: 'storage',
+    title: 'Storage & egress unit costs',
+    desc: 'Per-GB and per-TB rates applied to each catalog plan.',
+    fields: [
+      {key:'disk_dzd_per_gb_mo', label:'Storage (GiB/mo)', min:0.5, max:20, step:0.5, fmt:v=>v.toFixed(1), unit:'DZD',
+        tip:'Monthly cost to provision 1 GiB of NVMe to a VM (amortization + overhead). Large disks on big plans add up fast.'},
+      {key:'transfer_dzd_per_tb_mo', label:'Included transfer (TB/mo)', min:25, max:2000, step:25, unit:'DZD',
+        tip:'Cost per TB of monthly egress included in a plan. Priced per plan’s transfer column (0.5–136 TB).'},
+    ],
+  },
+  {
+    id: 'fleet',
+    title: 'Fleet & operations',
+    desc: 'People and scale — ops cost is divided by server count.',
+    fields: [
+      {key:'num_servers', label:'Fleet size', min:2, max:200, step:1, unit:'servers',
+        tip:'Number of physical hosts. More servers → lower ops $/server and bandwidth $/server, but more total CapEx.'},
+      {key:'team_people', label:'Ops headcount', min:1, max:10, step:1, unit:'people',
+        tip:'Full-time people doing infra/ops (not product). Total payroll ÷ fleet size = ops cost per server.'},
+      {key:'salary_dzd', label:'Salary per person', min:50000, max:400000, step:10000, unit:'DZD/mo',
+        tip:'Average monthly gross cost per ops FTE in DZD (salary + employer costs if you fold them in).'},
+    ],
+  },
+  {
+    id: 'pricing',
+    title: 'VM mix & pricing targets',
+    desc: 'Reference “typical” VM for slot math, plus business goals.',
+    fields: [
+      {key:'avg_vm_ram', label:'Ref VM RAM', min:0.5, max:16, step:0.5, fmt:v=>v.toFixed(1), unit:'GiB',
+        tip:'Average RAM per paying VM — used to count how many slots fit on a host. Affects break-even scaling.'},
+      {key:'avg_vm_vcpu', label:'Ref VM vCPUs', min:1, max:16, step:1, unit:'vCPU',
+        tip:'Average vCPUs per paying VM for capacity counting. Plans scale vs max(RAM/ref, vCPU/ref).'},
+      {key:'avg_vm_disk_gb', label:'Ref VM disk', min:10, max:500, step:5, unit:'GB',
+        tip:'Average provisioned disk per VM for host disk capacity limits (sellable slots).'},
+      {key:'avg_vm_transfer_tb', label:'Ref VM transfer', min:0.5, max:50, step:0.5, fmt:v=>v.toFixed(1), unit:'TB/mo',
+        tip:'Average included egress per VM in the catalog — used for host-level egress budgeting in older logic; per-plan transfer is priced directly.'},
+      {key:'utilization', label:'Target utilization', min:0.30, max:0.95, step:0.05, fmt:v=>Math.round(v*100)+'%',
+        tip:'Share of sellable VM slots you expect to actually sell (paying). 70% = realistic; 100% = best-case only.'},
+      {key:'margin', label:'Target gross margin', min:0.10, max:0.70, step:0.05, fmt:v=>Math.round(v*100)+'%',
+        tip:'Profit margin on top of break-even. Target price = break-even ÷ (1 − margin). 40% → divide by 0.6.'},
+    ],
+  },
 ];
 
+function escTip(s){
+  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
+
+function renderField(c){
+  const val = P[c.key];
+  let display = c.fmt ? c.fmt(val) : fmt(val);
+  if(c.unit === '$') display = '$' + display;
+  else if(c.unit) display = display + ' ' + c.unit;
+  const tipHtml = c.tip ? `<span class="tip-wrap">
+    <button type="button" class="tip-btn" aria-label="Help">?</button>
+    <span class="tip-popup" role="tooltip">${escTip(c.tip)}</span>
+  </span>` : '';
+  return `<div class="param-row">
+    <label class="param-label" for="sl-${c.key}">
+      <span class="param-label-text"><span>${c.label}</span>${tipHtml}</span>
+      <span class="param-val">${display}</span>
+    </label>
+    <input type="range" id="sl-${c.key}" min="${c.min}" max="${c.max}" step="${c.step}" value="${val}"
+      aria-label="${escTip(c.label)}"
+      oninput="P['${c.key}']=+this.value;render()">
+  </div>`;
+}
+
+function visibleParamGroups(){
+  return CONTROL_GROUPS.filter(g => !g.show || g.show());
+}
+
+function setParamTab(id){
+  activeParamTab = id;
+  renderControls();
+}
+
 function renderControls(){
+  const groups = visibleParamGroups();
+  if(!groups.some(g => g.id === activeParamTab)){
+    activeParamTab = groups[0] ? groups[0].id : 'fx';
+  }
+  const active = groups.find(g => g.id === activeParamTab) || groups[0];
+  const tabsEl = document.getElementById('param-tabs');
+  tabsEl.innerHTML = groups.map(g => `
+    <button type="button" class="param-tab${g.id === activeParamTab ? ' active' : ''}"
+      role="tab" aria-selected="${g.id === activeParamTab}"
+      aria-controls="controls" id="tab-${g.id}"
+      onclick="setParamTab('${g.id}')">${g.title}</button>
+  `).join('');
   const el = document.getElementById('controls');
-  el.innerHTML = CONTROLS.filter(c=>!c.show||c.show()).map(c=>{
-    const val = P[c.key];
-    const display = c.fmt ? c.fmt(val) : (c.unit==='$'?'$'+fmt(val): fmt(val)+(c.unit||''));
-    return `<div class="param-row">
-      <label class="param-label" for="sl-${c.key}">
-        <span>${c.label}</span>
-        <span class="param-val">${display}</span>
-      </label>
-      <input type="range" id="sl-${c.key}" min="${c.min}" max="${c.max}" step="${c.step}" value="${val}"
-        oninput="P['${c.key}']=+this.value;render()">
-    </div>`;
-  }).join('');
+  if(!active){
+    el.innerHTML = '';
+    return;
+  }
+  el.setAttribute('aria-labelledby', 'tab-' + active.id);
+  el.innerHTML = `<section class="param-group" aria-labelledby="grp-${active.id}">
+    <div class="param-group-title" id="grp-${active.id}">${active.title}</div>
+    <div class="param-group-desc">${active.desc}</div>
+    <div class="param-group-fields">${active.fields.map(renderField).join('')}</div>
+  </section>`;
 }
 
 function setScenario(s){
   scenario = s;
-  document.getElementById('sc-p1').classList.toggle('active', s==='p1');
-  document.getElementById('sc-p2').classList.toggle('active', s==='p2');
+  document.getElementById('sc-p1').classList.toggle('active', s === 'p1');
+  document.getElementById('sc-p2').classList.toggle('active', s === 'p2');
   render();
 }
 
+function mapPlansFromJson(sizes){
+  return sizes.map(s => ({
+    id: s.id,
+    name: s.name,
+    memory: s.memory,
+    vcpus: s.vcpus,
+    disk: s.disk,
+    transfer: s.transfer,
+    units: s.units,
+    monthly_usd: parseFloat(s.price_monthly),
+  }));
+}
+
+async function loadPlansFromJson(){
+  try {
+    const res = await fetch('pricing_placeholders.json');
+    if(!res.ok) return;
+    const data = await res.json();
+    if(data.sizes && data.sizes.length){
+      PLANS = mapPlansFromJson(data.sizes);
+      render();
+    }
+  } catch (_) { /* file:// or missing — embedded PLANS used */ }
+}
+
+loadPlansFromJson();
 render();
 </script>
