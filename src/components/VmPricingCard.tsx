@@ -1,11 +1,16 @@
 import { useMemo, useState } from 'react';
+import { formatSuggestedUsd, roundNiceUsd } from '../lib/nicePricing';
+import { fmt, formatListed, formatModelPrice, planBreakEvenDzd, priceFootnote } from '../lib/pricing';
 import { generateProposedCatalog, smallestTierMaxPerServer } from '../lib/proposedCatalog';
-import { roundNiceUsd, formatSuggestedUsd } from '../lib/nicePricing';
-import { fitLabel, hostCapacitySummary, unitsMismatch, canonicalUnits } from '../lib/slotCapacity';
-import { fmt, formatListed, formatModelPrice, listedDzd, planBreakEvenDzd, priceFootnote } from '../lib/pricing';
-import { ProposedCatalogFilters } from './ProposedCatalogFilters';
-import { DEFAULT_CATALOG_FILTERS } from '../types';
+import {
+  fitLabel,
+  hostCapacitySummary,
+  maxPerServer,
+  planFit
+} from '../lib/slotCapacity';
 import type { ComputeResult, ModelParams, Plan, PriceDisplay } from '../types';
+import { DEFAULT_CATALOG_FILTERS } from '../types';
+import { ProposedCatalogFilters } from './ProposedCatalogFilters';
 
 interface VmPricingCardProps {
   plans: Plan[];
@@ -84,11 +89,11 @@ export function VmPricingCard({ plans, params: P, computed: C, priceDisplay }: V
                 <tr>
                   <th>Plan</th>
                   <th>Spec</th>
+                  <th>Fit</th>
                   <th style={{ textAlign: 'right' }}>Listed</th>
                   <th style={{ textAlign: 'right' }}>Break-even</th>
                   <th style={{ textAlign: 'right' }}>Target (+{marginPct}%)</th>
                   <th style={{ textAlign: 'right' }}>Suggested</th>
-                  <th style={{ textAlign: 'right' }}>vs target</th>
                 </tr>
               </thead>
               <tbody>
@@ -97,28 +102,25 @@ export function VmPricingCard({ plans, params: P, computed: C, priceDisplay }: V
                   const targetDzd = beDzd / (1 - P.margin);
                   const beUsd = beDzd / usd;
                   const targetUsd = targetDzd / usd;
-                  const listedVal = priceDisplay === 'dzd' ? listedDzd(pl, usd) : pl.monthly_usd;
-                  const targetVal = priceDisplay === 'dzd' ? targetDzd : targetUsd;
-                  const mgn = ((listedVal - targetVal) / targetVal) * 100;
-                  const cls = mgn >= 0 ? 'pill-ok' : mgn > -25 ? 'pill-warn' : 'pill-bad';
-                  const mgnLabel = mgn >= 0 ? `+${Math.round(mgn)}%` : `${Math.round(mgn)}%`;
                   const beFmt = formatModelPrice(beDzd, beUsd, priceDisplay, 'cost');
                   const targetFmt = formatModelPrice(targetDzd, targetUsd, priceDisplay);
-                  const mismatch = unitsMismatch(pl);
+                  const maxHost = maxPerServer(pl, P);
+                  const fit = planFit(maxHost);
+                  const fitCls = `pill fit-${fit}`;
 
                   return (
                     <tr key={pl.id}>
                       <td>
                         <div>{pl.name}</div>
                         <div className="plan-id">{pl.id}</div>
-                        {mismatch && (
-                          <div className="units-warn" title="Canonical units = ceil(RAM GiB)">
-                            units {pl.units} → {canonicalUnits(pl.memory)}
-                          </div>
-                        )}
                       </td>
                       <td style={{ color: 'var(--color-text-secondary)' }}>
                         {pl.vcpus}c · {pl.memory}G · {pl.disk}G · {pl.transfer}T
+                      </td>
+                      <td>
+                        <span className={fitCls} title={fitLabel(fit, maxHost)}>
+                          {fit} · {fitLabel(fit, maxHost)}
+                        </span>
                       </td>
                       <td style={{ textAlign: 'right' }}>{formatListed(pl, priceDisplay, usd)}</td>
                       <td style={{ textAlign: 'right' }}>
@@ -127,9 +129,6 @@ export function VmPricingCard({ plans, params: P, computed: C, priceDisplay }: V
                       </td>
                       <td style={{ textAlign: 'right' }}>{targetFmt.main}</td>
                       <td style={{ textAlign: 'right' }}>{formatSuggestedUsd(suggestedUsd, priceDisplay, usd)}</td>
-                      <td style={{ textAlign: 'right' }}>
-                        <span className={`pill ${cls}`}>{mgnLabel}</span>
-                      </td>
                     </tr>
                   );
                 })}
