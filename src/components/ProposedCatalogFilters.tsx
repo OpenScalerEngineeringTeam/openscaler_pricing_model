@@ -1,35 +1,18 @@
-import { useState } from 'react';
-import type { CatalogFilters, PricingStrategy } from '../types';
+import type { CatalogFilters } from '../types';
 import { DEFAULT_CATALOG_FILTERS } from '../types';
 
 interface ProposedCatalogFiltersProps {
-  strategy: PricingStrategy;
-  onStrategy: (s: PricingStrategy) => void;
-  applied: CatalogFilters;
-  onApply: (f: CatalogFilters) => void;
+  filters: CatalogFilters;
+  onChange: (f: CatalogFilters) => void;
 }
 
-export function ProposedCatalogFilters({
-  strategy,
-  onStrategy,
-  applied,
-  onApply,
-}: ProposedCatalogFiltersProps) {
-  const [draft, setDraft] = useState<CatalogFilters>(applied);
-
-  const setDraftField = <K extends keyof CatalogFilters>(key: K, value: CatalogFilters[K]) => {
-    setDraft((d) => ({ ...d, [key]: value }));
-  };
-
-  const handleApply = () => {
-    onApply({ ...draft, strategy });
-    onStrategy(strategy);
+export function ProposedCatalogFilters({ filters, onChange }: ProposedCatalogFiltersProps) {
+  const setField = <K extends keyof CatalogFilters>(key: K, value: CatalogFilters[K]) => {
+    onChange({ ...filters, [key]: value });
   };
 
   const handleReset = () => {
-    const reset = { ...DEFAULT_CATALOG_FILTERS, strategy };
-    setDraft(reset);
-    onApply(reset);
+    onChange(DEFAULT_CATALOG_FILTERS);
   };
 
   return (
@@ -44,10 +27,10 @@ export function ProposedCatalogFilters({
               min={1}
               max={32}
               step={1}
-              value={draft.maxVcpus}
-              onChange={(e) => setDraftField('maxVcpus', Number(e.target.value))}
+              value={filters.maxVcpus}
+              onChange={(e) => setField('maxVcpus', Number(e.target.value))}
             />
-            <span className="filter-val">{draft.maxVcpus}</span>
+            <span className="filter-val">{filters.maxVcpus}</span>
           </label>
           <label className="filter-field">
             <span>Max RAM (GiB)</span>
@@ -56,10 +39,10 @@ export function ProposedCatalogFilters({
               min={1}
               max={128}
               step={1}
-              value={draft.maxRam}
-              onChange={(e) => setDraftField('maxRam', Number(e.target.value))}
+              value={filters.maxRam}
+              onChange={(e) => setField('maxRam', Number(e.target.value))}
             />
-            <span className="filter-val">{draft.maxRam}</span>
+            <span className="filter-val">{filters.maxRam}</span>
           </label>
           <label className="filter-field">
             <span>Max rows</span>
@@ -68,10 +51,10 @@ export function ProposedCatalogFilters({
               min={5}
               max={50}
               step={1}
-              value={draft.maxRows}
-              onChange={(e) => setDraftField('maxRows', Number(e.target.value))}
+              value={filters.maxRows}
+              onChange={(e) => setField('maxRows', Number(e.target.value))}
             />
-            <span className="filter-val">{draft.maxRows}</span>
+            <span className="filter-val">{filters.maxRows}</span>
           </label>
           <label className="filter-field">
             <span>Min fit (VMs/host)</span>
@@ -80,10 +63,10 @@ export function ProposedCatalogFilters({
               min={1}
               max={16}
               step={1}
-              value={draft.minFit}
-              onChange={(e) => setDraftField('minFit', Number(e.target.value))}
+              value={filters.minFit}
+              onChange={(e) => setField('minFit', Number(e.target.value))}
             />
-            <span className="filter-val">{draft.minFit}</span>
+            <span className="filter-val">{filters.minFit}</span>
           </label>
         </div>
         <div className="filter-profiles">
@@ -99,12 +82,12 @@ export function ProposedCatalogFilters({
             <label key={key} className="filter-check">
               <input
                 type="checkbox"
-                checked={draft.profiles[key]}
+                checked={filters.profiles[key]}
                 onChange={(e) =>
-                  setDraft((d) => ({
-                    ...d,
-                    profiles: { ...d.profiles, [key]: e.target.checked },
-                  }))
+                  onChange({
+                    ...filters,
+                    profiles: { ...filters.profiles, [key]: e.target.checked },
+                  })
                 }
               />
               {label}
@@ -113,40 +96,18 @@ export function ProposedCatalogFilters({
           <label className="filter-check">
             <input
               type="checkbox"
-              checked={draft.hideDuplicates}
-              onChange={(e) => setDraftField('hideDuplicates', e.target.checked)}
+              checked={filters.hideDuplicates}
+              onChange={(e) => setField('hideDuplicates', e.target.checked)}
             />
             Hide duplicate vCPU/RAM pairs
           </label>
         </div>
         <div className="catalog-filters-actions">
-          <button type="button" className="file-btn file-btn--primary" onClick={handleApply}>
-            Apply
-          </button>
           <button type="button" className="file-btn" onClick={handleReset}>
             Reset
           </button>
         </div>
       </div>
     </details>
-  );
-}
-
-export function PricingStrategySelect({
-  value,
-  onChange,
-}: {
-  value: PricingStrategy;
-  onChange: (s: PricingStrategy) => void;
-}) {
-  return (
-    <label className="strategy-select">
-      <span>Strategy</span>
-      <select value={value} onChange={(e) => onChange(e.target.value as PricingStrategy)}>
-        <option value="balanced">Balanced</option>
-        <option value="aggressive">Aggressive</option>
-        <option value="premium">Premium</option>
-      </select>
-    </label>
   );
 }

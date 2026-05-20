@@ -85,20 +85,12 @@ export interface ControlGroup {
   fields: ControlField[];
 }
 
-export type PricingStrategy = 'aggressive' | 'balanced' | 'premium';
 export type PlanFit = 'ok' | 'tight' | 'risky' | 'over';
-
-export interface PriceBand {
-  lowUsd: number;
-  suggestedUsd: number;
-  highUsd: number;
-}
 
 export interface ProposedPlan extends Plan {
   fit: PlanFit;
   maxPerServer: number;
-  band: PriceBand;
-  nearestPlanId?: string;
+  suggestedUsd: number;
 }
 
 export interface CatalogFilters {
@@ -106,7 +98,6 @@ export interface CatalogFilters {
   maxRam: number;
   maxRows: number;
   minFit: number;
-  strategy: PricingStrategy;
   hideDuplicates: boolean;
   profiles: {
     shared: boolean;
@@ -121,7 +112,6 @@ export const DEFAULT_CATALOG_FILTERS: CatalogFilters = {
   maxRam: 64,
   maxRows: 20,
   minFit: 4,
-  strategy: 'balanced',
   hideDuplicates: true,
   profiles: { shared: true, balanced: true, general: false, memory: false },
 };

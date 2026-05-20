@@ -1,7 +1,7 @@
 import { planBreakEvenDzd } from './pricing';
-import { priceBandFromTarget } from './nicePricing';
+import { roundNiceUsd } from './nicePricing';
 import { canonicalUnits, maxPerServer, planFit } from './slotCapacity';
-import type { CatalogFilters, ComputeResult, ModelParams, Plan, ProposedPlan } from '../types';
+import type { CatalogFilters, ComputeResult, ModelParams, ProposedPlan } from '../types';
 
 const VCPU_OPTIONS = [1, 2, 4, 8, 16, 32];
 const RAM_OPTIONS = [0.5, 1, 2, 4, 8, 16, 32, 64, 128];
@@ -66,26 +66,8 @@ function buildCandidates(filters: CatalogFilters): Candidate[] {
   return out;
 }
 
-function nearestPlanId(
-  pl: Pick<Plan, 'memory' | 'vcpus' | 'units'>,
-  catalog: Plan[],
-): string | undefined {
-  if (!catalog.length) return undefined;
-  let best = catalog[0];
-  let bestScore = Infinity;
-  for (const c of catalog) {
-    const score = Math.abs(c.memory - pl.memory) + Math.abs(c.vcpus - pl.vcpus) * 0.5 + Math.abs(c.units - pl.units) * 0.25;
-    if (score < bestScore) {
-      bestScore = score;
-      best = c;
-    }
-  }
-  return best.id;
-}
-
 export function generateProposedCatalog(
   filters: CatalogFilters,
-  catalog: Plan[],
   P: ModelParams,
   C: ComputeResult,
 ): ProposedPlan[] {
@@ -121,19 +103,18 @@ export function generateProposedCatalog(
 
     const beDzd = planBreakEvenDzd(spec, P, C);
     const targetUsd = beDzd / (1 - P.margin) / P.usd_dzd;
-    const band = priceBandFromTarget(targetUsd, filters.strategy);
+    const suggestedUsd = roundNiceUsd(targetUsd);
 
     rows.push({
       ...spec,
-      monthly_usd: band.suggestedUsd,
+      monthly_usd: suggestedUsd,
       fit: planFit(maxFull),
       maxPerServer: maxFull,
-      band,
-      nearestPlanId: nearestPlanId(spec, catalog),
+      suggestedUsd,
     });
   }
 
-  rows.sort((a, b) => a.units - b.units || a.band.suggestedUsd - b.band.suggestedUsd);
+  rows.sort((a, b) => a.units - b.units || a.suggestedUsd - b.suggestedUsd);
   return rows.slice(0, filters.maxRows);
 }
 

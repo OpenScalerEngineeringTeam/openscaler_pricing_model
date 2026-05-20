@@ -1,72 +1,52 @@
 import { describe, expect, it } from 'vitest';
 import {
-  formatBand,
-  formatSuggested,
+  formatSuggestedUsd,
   formatUsdPrice,
-  nextLadderStepUsd,
-  priceBandFromTarget,
+  priceStep,
   roundNiceUsd,
 } from './nicePricing';
 
+describe('priceStep', () => {
+  it('uses 0.1 below $20 and 1 at or above', () => {
+    expect(priceStep(7)).toBe(0.1);
+    expect(priceStep(19.9)).toBe(0.1);
+    expect(priceStep(20)).toBe(1);
+  });
+});
+
 describe('roundNiceUsd', () => {
-  it('rounds sub-$5 to half dollars upward', () => {
-    expect(roundNiceUsd(1.2)).toBe(1.5);
-    expect(roundNiceUsd(3.1)).toBeGreaterThanOrEqual(3);
+  it('rounds small prices to nearest 0.1', () => {
+    expect(roundNiceUsd(1.24)).toBe(1.2);
+    expect(roundNiceUsd(3.16)).toBe(3.2);
+    expect(roundNiceUsd(7.24)).toBe(7.2);
   });
 
-  it('rounds mid tier to whole dollars with charm endings', () => {
-    const r = roundNiceUsd(7.2);
-    expect(r).toBeGreaterThanOrEqual(7);
-    expect(r).toBeLessThanOrEqual(10);
+  it('rounds large prices to nearest 1', () => {
+    expect(roundNiceUsd(23.4)).toBe(23);
+    expect(roundNiceUsd(23.6)).toBe(24);
   });
 
-  it('rounds $20+ to $5 steps', () => {
-    expect(roundNiceUsd(23)).toBe(25);
-  });
-});
-
-describe('nextLadderStepUsd', () => {
-  it('steps above suggested price', () => {
-    expect(nextLadderStepUsd(8)).toBeGreaterThan(8);
-    expect(nextLadderStepUsd(25)).toBe(30);
-  });
-});
-
-describe('priceBandFromTarget', () => {
-  it('balanced band has low <= suggested <= high', () => {
-    const band = priceBandFromTarget(7.2, 'balanced');
-    expect(band.lowUsd).toBe(band.suggestedUsd);
-    expect(band.highUsd).toBeGreaterThanOrEqual(band.suggestedUsd);
-  });
-
-  it('aggressive band caps high at suggested', () => {
-    const band = priceBandFromTarget(12, 'aggressive');
-    expect(band.highUsd).toBe(band.suggestedUsd);
-    expect(band.lowUsd).toBeLessThanOrEqual(band.suggestedUsd);
-  });
-
-  it('premium band raises high above suggested', () => {
-    const band = priceBandFromTarget(12, 'premium');
-    expect(band.lowUsd).toBe(band.suggestedUsd);
-    expect(band.highUsd).toBeGreaterThanOrEqual(band.suggestedUsd);
+  it('stays close to target for typical VM tiers', () => {
+    for (const target of [1.8, 3.4, 7.2, 12.5, 18.9]) {
+      expect(Math.abs(roundNiceUsd(target) - target)).toBeLessThanOrEqual(0.2);
+    }
   });
 });
 
 describe('formatUsdPrice', () => {
   it('formats fractional small prices', () => {
-    expect(formatUsdPrice(2.5)).toBe('$2.50');
+    expect(formatUsdPrice(2.5)).toBe('$2.5');
     expect(formatUsdPrice(8)).toBe('$8');
+    expect(formatUsdPrice(25)).toBe('$25');
   });
 });
 
-describe('formatBand and formatSuggested', () => {
-  const band = priceBandFromTarget(8, 'balanced');
-
-  it('formats USD band range', () => {
-    expect(formatBand(band, 'usd', 135)).toMatch(/\$.*–\s*\$/);
+describe('formatSuggestedUsd', () => {
+  it('formats USD suggested', () => {
+    expect(formatSuggestedUsd(8, 'usd', 135)).toBe('$8');
   });
 
   it('formats DZD suggested', () => {
-    expect(formatSuggested(band, 'dzd', 135)).toMatch(/DZD$/);
+    expect(formatSuggestedUsd(8, 'dzd', 135)).toMatch(/DZD$/);
   });
 });

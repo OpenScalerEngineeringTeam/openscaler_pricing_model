@@ -41,9 +41,6 @@ body{font-family:var(--font-sans,system-ui,-apple-system,sans-serif);color:var(-
 .fit-risky{background:#FCEBEB;color:#A32D2D}
 .fit-over{background:#eee;color:#666}
 .vm-card-header{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:.65rem}
-.strategy-select{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--color-text-secondary)}
-.strategy-select select{font-size:11px;padding:4px 8px;border:0.5px solid var(--color-border-secondary,#ccc);border-radius:6px}
-.price-band{font-size:10px;color:var(--color-text-secondary);font-variant-numeric:tabular-nums}
 .units-warn{font-size:9px;color:var(--color-text-warning,#854f0b);margin-top:2px}
 .proposed-section{margin-top:1rem;padding-top:.85rem;border-top:0.5px solid var(--color-border-tertiary,#eee)}
 .proposed-header{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:.5rem}

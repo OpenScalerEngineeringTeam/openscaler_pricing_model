@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
 import { generateProposedCatalog, smallestTierMaxPerServer } from '../lib/proposedCatalog';
-import { priceBandFromTarget, formatBand, formatSuggested } from '../lib/nicePricing';
+import { roundNiceUsd, formatSuggestedUsd } from '../lib/nicePricing';
 import { fitLabel, hostCapacitySummary, unitsMismatch, canonicalUnits } from '../lib/slotCapacity';
 import { fmt, formatListed, formatModelPrice, listedDzd, planBreakEvenDzd, priceFootnote } from '../lib/pricing';
-import { ProposedCatalogFilters, PricingStrategySelect } from './ProposedCatalogFilters';
+import { ProposedCatalogFilters } from './ProposedCatalogFilters';
 import { DEFAULT_CATALOG_FILTERS } from '../types';
-import type { ComputeResult, ModelParams, Plan, PriceDisplay, PricingStrategy } from '../types';
+import type { ComputeResult, ModelParams, Plan, PriceDisplay } from '../types';
 
 interface VmPricingCardProps {
   plans: Plan[];
@@ -17,8 +17,7 @@ interface VmPricingCardProps {
 export function VmPricingCard({ plans, params: P, computed: C, priceDisplay }: VmPricingCardProps) {
   const usd = P.usd_dzd;
   const marginPct = Math.round(P.margin * 100);
-  const [strategy, setStrategy] = useState<PricingStrategy>('balanced');
-  const [appliedFilters, setAppliedFilters] = useState(DEFAULT_CATALOG_FILTERS);
+  const [catalogFilters, setCatalogFilters] = useState(DEFAULT_CATALOG_FILTERS);
 
   const refPlan = { memory: P.avg_vm_ram, vcpus: P.avg_vm_vcpu, disk: P.avg_vm_disk_gb, transfer: P.avg_vm_transfer_tb };
   const refBeDzd = planBreakEvenDzd(refPlan, P, C);
@@ -32,15 +31,14 @@ export function VmPricingCard({ plans, params: P, computed: C, priceDisplay }: V
     () =>
       plans.map((pl) => {
         const targetUsd = planBreakEvenDzd(pl, P, C) / (1 - P.margin) / usd;
-        const band = priceBandFromTarget(targetUsd, strategy);
-        return { plan: pl, band, targetUsd };
+        return { plan: pl, suggestedUsd: roundNiceUsd(targetUsd) };
       }),
-    [plans, P, C, usd, strategy],
+    [plans, P, C, usd],
   );
 
   const proposed = useMemo(
-    () => generateProposedCatalog({ ...appliedFilters, strategy }, plans, P, C),
-    [appliedFilters, strategy, plans, P, C],
+    () => generateProposedCatalog(catalogFilters, P, C),
+    [catalogFilters, P, C],
   );
 
   const hostCap = useMemo(() => hostCapacitySummary(P), [P]);
@@ -50,7 +48,6 @@ export function VmPricingCard({ plans, params: P, computed: C, priceDisplay }: V
     <div className="card">
       <div className="vm-card-header">
         <div className="section-title">VM pricing vs catalog ({plans.length} plans)</div>
-        <PricingStrategySelect value={strategy} onChange={setStrategy} />
       </div>
       <div className="vm-table-wrap">
         <table className="vm-table">
@@ -62,12 +59,11 @@ export function VmPricingCard({ plans, params: P, computed: C, priceDisplay }: V
               <th style={{ textAlign: 'right' }}>Break-even</th>
               <th style={{ textAlign: 'right' }}>Target (+{marginPct}%)</th>
               <th style={{ textAlign: 'right' }}>Suggested</th>
-              <th style={{ textAlign: 'right' }}>Band</th>
               <th style={{ textAlign: 'right' }}>vs target</th>
             </tr>
           </thead>
           <tbody>
-            {catalogSuggestions.map(({ plan: pl, band }) => {
+            {catalogSuggestions.map(({ plan: pl, suggestedUsd }) => {
               const beDzd = planBreakEvenDzd(pl, P, C);
               const targetDzd = beDzd / (1 - P.margin);
               const beUsd = beDzd / usd;
@@ -101,10 +97,7 @@ export function VmPricingCard({ plans, params: P, computed: C, priceDisplay }: V
                     {beFmt.sub && <span className="price-sub">{beFmt.sub}</span>}
                   </td>
                   <td style={{ textAlign: 'right' }}>{targetFmt.main}</td>
-                  <td style={{ textAlign: 'right' }}>{formatSuggested(band, priceDisplay, usd)}</td>
-                  <td style={{ textAlign: 'right' }}>
-                    <span className="price-band">{formatBand(band, priceDisplay, usd)}</span>
-                  </td>
+                  <td style={{ textAlign: 'right' }}>{formatSuggestedUsd(suggestedUsd, priceDisplay, usd)}</td>
                   <td style={{ textAlign: 'right' }}>
                     <span className={`pill ${cls}`}>{mgnLabel}</span>
                   </td>
@@ -120,15 +113,10 @@ export function VmPricingCard({ plans, params: P, computed: C, priceDisplay }: V
           <div className="section-title">Proposed catalog</div>
           <span className="proposed-meta">
             {proposed.length} tiers · host {hostCap.binding} ·{' '}
-            {smallestFit != null ? `≥${smallestFit} VMs/host (smallest shown)` : 'Apply filters'}
+            {smallestFit != null ? `≥${smallestFit} VMs/host (smallest shown)` : 'no tiers match filters'}
           </span>
         </div>
-        <ProposedCatalogFilters
-          strategy={strategy}
-          onStrategy={setStrategy}
-          applied={appliedFilters}
-          onApply={setAppliedFilters}
-        />
+        <ProposedCatalogFilters filters={catalogFilters} onChange={setCatalogFilters} />
         <div className="vm-table-wrap vm-table-wrap--proposed">
           <table className="vm-table">
             <thead>
@@ -138,15 +126,13 @@ export function VmPricingCard({ plans, params: P, computed: C, priceDisplay }: V
                 <th>Fit</th>
                 <th style={{ textAlign: 'right' }}>Break-even</th>
                 <th style={{ textAlign: 'right' }}>Suggested</th>
-                <th style={{ textAlign: 'right' }}>Band</th>
-                <th>Nearest</th>
               </tr>
             </thead>
             <tbody>
               {proposed.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="proposed-empty">
-                    No tiers match filters. Lower min fit or widen max vCPU/RAM, then Apply.
+                  <td colSpan={5} className="proposed-empty">
+                    No tiers match filters. Lower min fit or widen max vCPU/RAM.
                   </td>
                 </tr>
               ) : (
@@ -172,11 +158,7 @@ export function VmPricingCard({ plans, params: P, computed: C, priceDisplay }: V
                         {beFmt.main}
                         {beFmt.sub && <span className="price-sub">{beFmt.sub}</span>}
                       </td>
-                      <td style={{ textAlign: 'right' }}>{formatSuggested(pl.band, priceDisplay, usd)}</td>
-                      <td style={{ textAlign: 'right' }}>
-                        <span className="price-band">{formatBand(pl.band, priceDisplay, usd)}</span>
-                      </td>
-                      <td className="plan-id">{pl.nearestPlanId ?? '—'}</td>
+                      <td style={{ textAlign: 'right' }}>{formatSuggestedUsd(pl.suggestedUsd, priceDisplay, usd)}</td>
                     </tr>
                   );
                 })
