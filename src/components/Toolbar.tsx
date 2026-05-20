@@ -1,18 +1,48 @@
 import type { PriceDisplay, Scenario } from '../types';
 
+export type AppView = 'model' | 'optimizer';
+
 interface ToolbarProps {
+  activeView: AppView;
   scenario: Scenario;
   priceDisplay: PriceDisplay;
   saveStatus: string;
+  onView: (v: AppView) => void;
   onScenario: (s: Scenario) => void;
   onPriceDisplay: (p: PriceDisplay) => void;
   onSave: () => void;
   onLoad: (file: File) => void;
 }
 
-export function Toolbar({ scenario, priceDisplay, saveStatus, onScenario, onPriceDisplay, onSave, onLoad }: ToolbarProps) {
+export function Toolbar({
+  activeView,
+  scenario,
+  priceDisplay,
+  saveStatus,
+  onView,
+  onScenario,
+  onPriceDisplay,
+  onSave,
+  onLoad,
+}: ToolbarProps) {
   return (
     <div className="toolbar">
+      <div className="view-toggle scenario-toggle">
+        <button
+          type="button"
+          className={`sc-btn${activeView === 'model' ? ' active' : ''}`}
+          onClick={() => onView('model')}
+        >
+          Model
+        </button>
+        <button
+          type="button"
+          className={`sc-btn${activeView === 'optimizer' ? ' active' : ''}`}
+          onClick={() => onView('optimizer')}
+        >
+          Optimizer
+        </button>
+      </div>
       <div className="scenario-toggle">
         <button type="button" className={`sc-btn${scenario === 'p2' ? ' active' : ''}`} onClick={() => onScenario('p2')}>
           Phase 2 — self-assembled
@@ -22,6 +52,7 @@ export function Toolbar({ scenario, priceDisplay, saveStatus, onScenario, onPric
         </button>
       </div>
       <div className="toolbar-actions">
+        {activeView === 'model' && (
         <div className="price-display-wrap">
           <label htmlFor="price-display">Price display</label>
           <select id="price-display" value={priceDisplay} onChange={(e) => onPriceDisplay(e.target.value as PriceDisplay)}>
@@ -29,7 +60,8 @@ export function Toolbar({ scenario, priceDisplay, saveStatus, onScenario, onPric
             <option value="dzd">DZD</option>
           </select>
         </div>
-        <button type="button" className="file-btn file-btn--primary" onClick={onSave} title="Save config (Ctrl+S)">
+        )}
+        <button type="button" className="file-btn file-btn--primary" onClick={onSave} title="Save config (Ctrl+S)" disabled={activeView === 'optimizer'}>
           Save config…
         </button>
         <button type="button" className="file-btn" onClick={() => document.getElementById('config-file-input')?.click()} title="Load config">

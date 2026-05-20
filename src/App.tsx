@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import './App.css';
 import { CostBreakdown } from './components/CostBreakdown';
 import { ParamsPanel } from './components/ParamsPanel';
-import { Toolbar } from './components/Toolbar';
+import { OptimizerPanel } from './components/OptimizerPanel';
+import { Toolbar, type AppView } from './components/Toolbar';
 import { VmPricingCard } from './components/VmPricingCard';
 import { applyConfigDocument, buildConfigDocument, saveConfigToFile } from './lib/config';
 import { compute } from './lib/compute';
@@ -18,6 +19,7 @@ export default function App() {
   const [activeParamTab, setActiveParamTab] = useState('fx');
   const [hwFromComponents, setHwFromComponents] = useState(false);
   const [saveStatus, setSaveStatus] = useState('');
+  const [activeView, setActiveView] = useState<AppView>('model');
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const computed = useMemo(() => compute(params, scenario, hwFromComponents), [params, scenario, hwFromComponents]);
@@ -80,33 +82,48 @@ export default function App() {
     <div className="app-wrap">
       <h2 className="sr-only">OpenScaler cloud cost estimator — monthly per-server cost breakdown and VM pricing model</h2>
       <Toolbar
+        activeView={activeView}
         scenario={scenario}
         priceDisplay={priceDisplay}
         saveStatus={saveStatus}
+        onView={setActiveView}
         onScenario={setScenario}
         onPriceDisplay={setPriceDisplay}
         onSave={handleSave}
         onLoad={handleLoad}
       />
-      <div className="two-col">
-        <div className="card">
-          <div className="section-title">Cost breakdown / server / month</div>
-          <CostBreakdown computed={computed} />
-          <ParamsPanel
-            params={params}
-            scenario={scenario}
-            activeTab={activeParamTab}
-            hwFromComponents={hwFromComponents}
-            onHwFromComponents={(enabled) => {
-              setHwFromComponents(enabled);
-              if (enabled) setActiveParamTab('hw_components');
-            }}
-            onTab={setActiveParamTab}
-            onParam={setParam}
-          />
+      {activeView === 'optimizer' ? (
+        <OptimizerPanel
+          params={params}
+          scenario={scenario}
+          hwFromComponents={hwFromComponents}
+          onApply={(next) => {
+            setParams(next);
+            setActiveView('model');
+          }}
+          onBack={() => setActiveView('model')}
+        />
+      ) : (
+        <div className="two-col">
+          <div className="card">
+            <div className="section-title">Cost breakdown / server / month</div>
+            <CostBreakdown computed={computed} />
+            <ParamsPanel
+              params={params}
+              scenario={scenario}
+              activeTab={activeParamTab}
+              hwFromComponents={hwFromComponents}
+              onHwFromComponents={(enabled) => {
+                setHwFromComponents(enabled);
+                if (enabled) setActiveParamTab('hw_components');
+              }}
+              onTab={setActiveParamTab}
+              onParam={setParam}
+            />
+          </div>
+          <VmPricingCard plans={plans} params={params} computed={computed} priceDisplay={priceDisplay} />
         </div>
-        <VmPricingCard plans={plans} params={params} computed={computed} priceDisplay={priceDisplay} />
-      </div>
+      )}
     </div>
   );
 }
