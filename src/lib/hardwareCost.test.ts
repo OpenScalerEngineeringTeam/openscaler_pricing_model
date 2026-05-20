@@ -19,10 +19,11 @@ describe('estimateServerHwUsd', () => {
     expect(estimateServerHwUsd(P)).toBe(2 * 1000 + 256 * 2 + 8 * 100 + 500 + 300);
   });
 
-  it('default unit prices land near the reference ~$4k server from the cost model doc', () => {
+  it('default unit prices match 2026 BOM doc for 1×128 GiB×4 TB reference server', () => {
     const total = estimateServerHwUsd(DEFAULT_PARAMS);
-    expect(total).toBeGreaterThanOrEqual(3500);
-    expect(total).toBeLessThanOrEqual(4500);
+    expect(total).toBeGreaterThanOrEqual(5300);
+    expect(total).toBeLessThanOrEqual(6500);
+    expect(total).toBe(2000 + 128 * 12 + 4 * 250 + 850 + 750);
   });
 });
 

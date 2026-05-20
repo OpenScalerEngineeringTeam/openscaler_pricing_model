@@ -30,11 +30,11 @@ export function getControlGroups(scenario: Scenario, options: ControlGroupOption
               {
                 key: 'hw_usd' as const,
                 label: 'Server hardware (USD)',
-                min: 1500,
-                max: 10000,
+                min: 3000,
+                max: 15000,
                 step: 100,
                 unit: '$',
-                tip: 'Total purchase cost per server before shipping and customs — used when component estimate is off.',
+                tip: 'Total purchase cost per server before shipping and customs (~$5.9k midpoint for 1×128 GiB×4 TB — see docs/reference/hardware-bom-defaults-2026.md).',
               },
             ]),
         {
@@ -55,11 +55,11 @@ export function getControlGroups(scenario: Scenario, options: ControlGroupOption
       show: () => scenario === 'p2' && hwFromComponents,
       fields: [
         { key: 'cpu_sockets', label: 'CPU sockets', min: 1, max: 4, step: 1, unit: 'socket', tip: 'Physical CPUs installed (1 = single-socket EPYC/Xeon, 2 = dual-socket).' },
-        { key: 'hw_usd_per_cpu_socket', label: 'Price per socket', min: 300, max: 5000, step: 50, unit: '$', tip: 'USD per CPU package (e.g. EPYC 7543P refurb ~$800–1,700 new).' },
-        { key: 'hw_usd_per_gib_ram', label: 'Price per GiB RAM', min: 1, max: 8, step: 0.1, fmt: (v) => v.toFixed(1), unit: '$/GiB', tip: 'Server ECC RDIMM — doc ballpark ~$50–80 per 32 GiB DIMM → about $1.6–2.5/GiB.' },
-        { key: 'hw_usd_per_tb_nvme', label: 'Price per TB NVMe', min: 50, max: 400, step: 5, unit: '$/TB', tip: 'Enterprise U.2 NVMe — doc ~$100–150/TB for 3.84 TB class drives.' },
-        { key: 'hw_usd_motherboard', label: 'Motherboard', min: 200, max: 2000, step: 50, unit: '$', tip: 'Server board with IPMI/BMC (e.g. Supermicro H12SSL-i ~$500–700).' },
-        { key: 'hw_usd_chassis_misc', label: 'Chassis, NIC & misc', min: 100, max: 2000, step: 50, unit: '$', tip: '2U chassis, redundant PSU, 10/25GbE NIC, rails, cables.' },
+        { key: 'hw_usd_per_cpu_socket', label: 'Price per socket', min: 700, max: 3500, step: 50, unit: '$', tip: 'Mid-range single-socket EPYC OEM/tray — default $2,000; range $1,400–$2,800 (2026 BOM doc).' },
+        { key: 'hw_usd_per_gib_ram', label: 'Price per GiB RAM', min: 5, max: 20, step: 0.5, fmt: (v) => v.toFixed(1), unit: '$/GiB', tip: 'DDR5 ECC RDIMM — default $12/GiB; range $8–$18 (2026 AI-driven DRAM pricing).' },
+        { key: 'hw_usd_per_tb_nvme', label: 'Price per TB NVMe', min: 100, max: 400, step: 5, unit: '$/TB', tip: 'Enterprise U.2/U.3 NVMe — default $250/TB; range $180–$350.' },
+        { key: 'hw_usd_motherboard', label: 'Motherboard', min: 400, max: 1500, step: 50, unit: '$', tip: 'Single-socket EPYC board with IPMI — default $850; range $650–$1,100.' },
+        { key: 'hw_usd_chassis_misc', label: 'Chassis, NIC & misc', min: 400, max: 1200, step: 50, unit: '$', tip: '2U chassis, redundant PSU, 10/25 GbE NIC, rails — default $750; range $550–$950.' },
       ],
     },
     {
