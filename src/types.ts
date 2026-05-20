@@ -84,3 +84,44 @@ export interface ControlGroup {
   show?: () => boolean;
   fields: ControlField[];
 }
+
+export type PricingStrategy = 'aggressive' | 'balanced' | 'premium';
+export type PlanFit = 'ok' | 'tight' | 'risky' | 'over';
+
+export interface PriceBand {
+  lowUsd: number;
+  suggestedUsd: number;
+  highUsd: number;
+}
+
+export interface ProposedPlan extends Plan {
+  fit: PlanFit;
+  maxPerServer: number;
+  band: PriceBand;
+  nearestPlanId?: string;
+}
+
+export interface CatalogFilters {
+  maxVcpus: number;
+  maxRam: number;
+  maxRows: number;
+  minFit: number;
+  strategy: PricingStrategy;
+  hideDuplicates: boolean;
+  profiles: {
+    shared: boolean;
+    balanced: boolean;
+    general: boolean;
+    memory: boolean;
+  };
+}
+
+export const DEFAULT_CATALOG_FILTERS: CatalogFilters = {
+  maxVcpus: 16,
+  maxRam: 64,
+  maxRows: 20,
+  minFit: 4,
+  strategy: 'balanced',
+  hideDuplicates: true,
+  profiles: { shared: true, balanced: true, general: false, memory: false },
+};

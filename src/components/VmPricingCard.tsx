@@ -1,5 +1,11 @@
+import { useMemo, useState } from 'react';
+import { generateProposedCatalog, smallestTierMaxPerServer } from '../lib/proposedCatalog';
+import { priceBandFromTarget, formatBand, formatSuggested } from '../lib/nicePricing';
+import { fitLabel, hostCapacitySummary, unitsMismatch, canonicalUnits } from '../lib/slotCapacity';
 import { fmt, formatListed, formatModelPrice, listedDzd, planBreakEvenDzd, priceFootnote } from '../lib/pricing';
-import type { ComputeResult, ModelParams, Plan, PriceDisplay } from '../types';
+import { ProposedCatalogFilters, PricingStrategySelect } from './ProposedCatalogFilters';
+import { DEFAULT_CATALOG_FILTERS } from '../types';
+import type { ComputeResult, ModelParams, Plan, PriceDisplay, PricingStrategy } from '../types';
 
 interface VmPricingCardProps {
   plans: Plan[];
@@ -11,6 +17,8 @@ interface VmPricingCardProps {
 export function VmPricingCard({ plans, params: P, computed: C, priceDisplay }: VmPricingCardProps) {
   const usd = P.usd_dzd;
   const marginPct = Math.round(P.margin * 100);
+  const [strategy, setStrategy] = useState<PricingStrategy>('balanced');
+  const [appliedFilters, setAppliedFilters] = useState(DEFAULT_CATALOG_FILTERS);
 
   const refPlan = { memory: P.avg_vm_ram, vcpus: P.avg_vm_vcpu, disk: P.avg_vm_disk_gb, transfer: P.avg_vm_transfer_tb };
   const refBeDzd = planBreakEvenDzd(refPlan, P, C);
@@ -20,9 +28,30 @@ export function VmPricingCard({ plans, params: P, computed: C, priceDisplay }: V
   const refBeMetric = priceDisplay === 'dzd' ? `${fmt(refBeDzd)} DZD` : `$${refBeUsd.toFixed(2)}`;
   const refTargetMetric = priceDisplay === 'dzd' ? `${fmt(refTargetDzd)} DZD` : `$${refTargetUsd.toFixed(2)}`;
 
+  const catalogSuggestions = useMemo(
+    () =>
+      plans.map((pl) => {
+        const targetUsd = planBreakEvenDzd(pl, P, C) / (1 - P.margin) / usd;
+        const band = priceBandFromTarget(targetUsd, strategy);
+        return { plan: pl, band, targetUsd };
+      }),
+    [plans, P, C, usd, strategy],
+  );
+
+  const proposed = useMemo(
+    () => generateProposedCatalog({ ...appliedFilters, strategy }, plans, P, C),
+    [appliedFilters, strategy, plans, P, C],
+  );
+
+  const hostCap = useMemo(() => hostCapacitySummary(P), [P]);
+  const smallestFit = smallestTierMaxPerServer(proposed);
+
   return (
     <div className="card">
-      <div className="section-title">VM pricing vs catalog ({plans.length} plans)</div>
+      <div className="vm-card-header">
+        <div className="section-title">VM pricing vs catalog ({plans.length} plans)</div>
+        <PricingStrategySelect value={strategy} onChange={setStrategy} />
+      </div>
       <div className="vm-table-wrap">
         <table className="vm-table">
           <thead>
@@ -32,11 +61,13 @@ export function VmPricingCard({ plans, params: P, computed: C, priceDisplay }: V
               <th style={{ textAlign: 'right' }}>Listed</th>
               <th style={{ textAlign: 'right' }}>Break-even</th>
               <th style={{ textAlign: 'right' }}>Target (+{marginPct}%)</th>
+              <th style={{ textAlign: 'right' }}>Suggested</th>
+              <th style={{ textAlign: 'right' }}>Band</th>
               <th style={{ textAlign: 'right' }}>vs target</th>
             </tr>
           </thead>
           <tbody>
-            {plans.map((pl) => {
+            {catalogSuggestions.map(({ plan: pl, band }) => {
               const beDzd = planBreakEvenDzd(pl, P, C);
               const targetDzd = beDzd / (1 - P.margin);
               const beUsd = beDzd / usd;
@@ -48,12 +79,18 @@ export function VmPricingCard({ plans, params: P, computed: C, priceDisplay }: V
               const mgnLabel = mgn >= 0 ? `+${Math.round(mgn)}%` : `${Math.round(mgn)}%`;
               const beFmt = formatModelPrice(beDzd, beUsd, priceDisplay, 'cost');
               const targetFmt = formatModelPrice(targetDzd, targetUsd, priceDisplay);
+              const mismatch = unitsMismatch(pl);
 
               return (
                 <tr key={pl.id}>
                   <td>
                     <div>{pl.name}</div>
                     <div className="plan-id">{pl.id}</div>
+                    {mismatch && (
+                      <div className="units-warn" title="Canonical units = ceil(RAM GiB)">
+                        units {pl.units} → {canonicalUnits(pl.memory)}
+                      </div>
+                    )}
                   </td>
                   <td style={{ color: 'var(--color-text-secondary)' }}>
                     {pl.vcpus}c · {pl.memory}G · {pl.disk}G · {pl.transfer}T
@@ -64,6 +101,10 @@ export function VmPricingCard({ plans, params: P, computed: C, priceDisplay }: V
                     {beFmt.sub && <span className="price-sub">{beFmt.sub}</span>}
                   </td>
                   <td style={{ textAlign: 'right' }}>{targetFmt.main}</td>
+                  <td style={{ textAlign: 'right' }}>{formatSuggested(band, priceDisplay, usd)}</td>
+                  <td style={{ textAlign: 'right' }}>
+                    <span className="price-band">{formatBand(band, priceDisplay, usd)}</span>
+                  </td>
                   <td style={{ textAlign: 'right' }}>
                     <span className={`pill ${cls}`}>{mgnLabel}</span>
                   </td>
@@ -73,6 +114,78 @@ export function VmPricingCard({ plans, params: P, computed: C, priceDisplay }: V
           </tbody>
         </table>
       </div>
+
+      <div className="proposed-section">
+        <div className="proposed-header">
+          <div className="section-title">Proposed catalog</div>
+          <span className="proposed-meta">
+            {proposed.length} tiers · host {hostCap.binding} ·{' '}
+            {smallestFit != null ? `≥${smallestFit} VMs/host (smallest shown)` : 'Apply filters'}
+          </span>
+        </div>
+        <ProposedCatalogFilters
+          strategy={strategy}
+          onStrategy={setStrategy}
+          applied={appliedFilters}
+          onApply={setAppliedFilters}
+        />
+        <div className="vm-table-wrap vm-table-wrap--proposed">
+          <table className="vm-table">
+            <thead>
+              <tr>
+                <th>Spec</th>
+                <th>Units</th>
+                <th>Fit</th>
+                <th style={{ textAlign: 'right' }}>Break-even</th>
+                <th style={{ textAlign: 'right' }}>Suggested</th>
+                <th style={{ textAlign: 'right' }}>Band</th>
+                <th>Nearest</th>
+              </tr>
+            </thead>
+            <tbody>
+              {proposed.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="proposed-empty">
+                    No tiers match filters. Lower min fit or widen max vCPU/RAM, then Apply.
+                  </td>
+                </tr>
+              ) : (
+                proposed.map((pl) => {
+                  const beDzd = planBreakEvenDzd(pl, P, C);
+                  const beUsd = beDzd / usd;
+                  const beFmt = formatModelPrice(beDzd, beUsd, priceDisplay, 'cost');
+                  const fit = pl.fit;
+                  const fitCls = `pill fit-${fit}`;
+
+                  return (
+                    <tr key={pl.id}>
+                      <td style={{ color: 'var(--color-text-secondary)' }}>
+                        {pl.vcpus}c · {pl.memory}G · {pl.disk}G · {pl.transfer}T
+                      </td>
+                      <td>{pl.units}</td>
+                      <td>
+                        <span className={fitCls} title={fitLabel(fit, pl.maxPerServer)}>
+                          {fit} · {fitLabel(fit, pl.maxPerServer)}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        {beFmt.main}
+                        {beFmt.sub && <span className="price-sub">{beFmt.sub}</span>}
+                      </td>
+                      <td style={{ textAlign: 'right' }}>{formatSuggested(pl.band, priceDisplay, usd)}</td>
+                      <td style={{ textAlign: 'right' }}>
+                        <span className="price-band">{formatBand(pl.band, priceDisplay, usd)}</span>
+                      </td>
+                      <td className="plan-id">{pl.nearestPlanId ?? '—'}</td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <p className="footnote footnote--vm" dangerouslySetInnerHTML={{ __html: priceFootnote(priceDisplay, usd) }} />
       <div className="metrics-grid">
         <div className="metric">
@@ -86,6 +199,9 @@ export function VmPricingCard({ plans, params: P, computed: C, priceDisplay }: V
           </div>
           <div className="metric-value">
             {Math.round(C.paying_vms)} / {C.sellable_vms}
+          </div>
+          <div className="metric-sub">
+            Physical: {Math.round(hostCap.sellableRamGiB)}G RAM · {hostCap.sellableVcpus} vCPU
           </div>
         </div>
         <div className="metric">
