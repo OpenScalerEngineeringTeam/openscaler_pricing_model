@@ -1,5 +1,5 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
-import { getVisibleControlFields } from '../lib/paramBounds';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { defaultOptimizerPins, getOptimizerControlFields } from '../lib/paramBounds';
 import {
   OBJECTIVE_LABELS,
   evaluateObjective,
@@ -22,12 +22,6 @@ interface OptimizerPanelProps {
 
 const OBJECTIVE_IDS = Object.keys(OBJECTIVE_LABELS) as ObjectiveId[];
 
-function defaultPins(fields: { key: keyof ModelParams }[]): PinState {
-  const pins: PinState = {};
-  for (const f of fields) pins[f.key] = true;
-  return pins;
-}
-
 export function OptimizerPanel({
   params,
   scenario,
@@ -36,12 +30,17 @@ export function OptimizerPanel({
   onBack,
 }: OptimizerPanelProps) {
   const fields = useMemo(
-    () => getVisibleControlFields(scenario, hwFromComponents),
+    () => getOptimizerControlFields(scenario, hwFromComponents),
     [scenario, hwFromComponents],
   );
   const searchableKeys = useMemo(() => fields.map((f) => f.key), [fields]);
 
-  const [pins, setPins] = useState<PinState>(() => defaultPins(fields));
+  const [pins, setPins] = useState<PinState>(() => defaultOptimizerPins(scenario, hwFromComponents));
+
+  useEffect(() => {
+    setPins(defaultOptimizerPins(scenario, hwFromComponents));
+  }, [scenario, hwFromComponents]);
+
   const [objectiveId, setObjectiveId] = useState<ObjectiveId>('maxFleetProfit');
   const [profitFloorDzd, setProfitFloorDzd] = useState('');
   const [refTargetUsdCap, setRefTargetUsdCap] = useState('12');
@@ -81,12 +80,15 @@ export function OptimizerPanel({
     setPins((p) => ({ ...p, [key]: !p[key] }));
   }, []);
 
-  const pinAll = useCallback(() => setPins(defaultPins(fields)), [fields]);
-  const unpinAll = useCallback(() => {
+  const pinAll = useCallback(() => {
     const next: PinState = {};
-    for (const f of fields) next[f.key] = false;
+    for (const f of fields) next[f.key] = true;
     setPins(next);
   }, [fields]);
+  const unpinAll = useCallback(
+    () => setPins(defaultOptimizerPins(scenario, hwFromComponents)),
+    [scenario, hwFromComponents],
+  );
 
   const handleRun = useCallback(() => {
     if (freeKeys.length === 0) {
@@ -137,7 +139,9 @@ export function OptimizerPanel({
         <div>
           <h3 className="optimizer-title">Parameter optimizer</h3>
           <p className="optimizer-desc">
-            Pin parameters to hold them fixed; unpin parameters the search may adjust within slider bounds.
+            Checked = pinned (held at your model value). By default, fleet size, ops payroll, reference VM mix, physical
+            host spec, and unit rates are pinned; oversubscription, NVMe, utilization, margin, and hardware total are
+            free. Exchange rate, import overhead, power tariff, rack, and transit price are not listed (always fixed).
           </p>
         </div>
         <button type="button" className="file-btn" onClick={onBack}>
@@ -275,7 +279,7 @@ export function OptimizerPanel({
               <label key={f.key} className="optimizer-pin-row">
                 <input
                   type="checkbox"
-                  checked={pins[f.key] !== false}
+                  checked={pins[f.key] === true}
                   onChange={() => togglePin(f.key)}
                   disabled={running}
                 />
