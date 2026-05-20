@@ -14,9 +14,12 @@ interface VmPricingCardProps {
   priceDisplay: PriceDisplay;
 }
 
+type VmPricingTab = 'compare' | 'proposed';
+
 export function VmPricingCard({ plans, params: P, computed: C, priceDisplay }: VmPricingCardProps) {
   const usd = P.usd_dzd;
   const marginPct = Math.round(P.margin * 100);
+  const [activeTab, setActiveTab] = useState<VmPricingTab>('compare');
   const [catalogFilters, setCatalogFilters] = useState(DEFAULT_CATALOG_FILTERS);
 
   const refPlan = { memory: P.avg_vm_ram, vcpus: P.avg_vm_vcpu, disk: P.avg_vm_disk_gb, transfer: P.avg_vm_transfer_tb };
@@ -47,126 +50,155 @@ export function VmPricingCard({ plans, params: P, computed: C, priceDisplay }: V
   return (
     <div className="card">
       <div className="vm-card-header">
-        <div className="section-title">VM pricing vs catalog ({plans.length} plans)</div>
-      </div>
-      <div className="vm-table-wrap">
-        <table className="vm-table">
-          <thead>
-            <tr>
-              <th>Plan</th>
-              <th>Spec</th>
-              <th style={{ textAlign: 'right' }}>Listed</th>
-              <th style={{ textAlign: 'right' }}>Break-even</th>
-              <th style={{ textAlign: 'right' }}>Target (+{marginPct}%)</th>
-              <th style={{ textAlign: 'right' }}>Suggested</th>
-              <th style={{ textAlign: 'right' }}>vs target</th>
-            </tr>
-          </thead>
-          <tbody>
-            {catalogSuggestions.map(({ plan: pl, suggestedUsd }) => {
-              const beDzd = planBreakEvenDzd(pl, P, C);
-              const targetDzd = beDzd / (1 - P.margin);
-              const beUsd = beDzd / usd;
-              const targetUsd = targetDzd / usd;
-              const listedVal = priceDisplay === 'dzd' ? listedDzd(pl, usd) : pl.monthly_usd;
-              const targetVal = priceDisplay === 'dzd' ? targetDzd : targetUsd;
-              const mgn = ((listedVal - targetVal) / targetVal) * 100;
-              const cls = mgn >= 0 ? 'pill-ok' : mgn > -25 ? 'pill-warn' : 'pill-bad';
-              const mgnLabel = mgn >= 0 ? `+${Math.round(mgn)}%` : `${Math.round(mgn)}%`;
-              const beFmt = formatModelPrice(beDzd, beUsd, priceDisplay, 'cost');
-              const targetFmt = formatModelPrice(targetDzd, targetUsd, priceDisplay);
-              const mismatch = unitsMismatch(pl);
-
-              return (
-                <tr key={pl.id}>
-                  <td>
-                    <div>{pl.name}</div>
-                    <div className="plan-id">{pl.id}</div>
-                    {mismatch && (
-                      <div className="units-warn" title="Canonical units = ceil(RAM GiB)">
-                        units {pl.units} → {canonicalUnits(pl.memory)}
-                      </div>
-                    )}
-                  </td>
-                  <td style={{ color: 'var(--color-text-secondary)' }}>
-                    {pl.vcpus}c · {pl.memory}G · {pl.disk}G · {pl.transfer}T
-                  </td>
-                  <td style={{ textAlign: 'right' }}>{formatListed(pl, priceDisplay, usd)}</td>
-                  <td style={{ textAlign: 'right' }}>
-                    {beFmt.main}
-                    {beFmt.sub && <span className="price-sub">{beFmt.sub}</span>}
-                  </td>
-                  <td style={{ textAlign: 'right' }}>{targetFmt.main}</td>
-                  <td style={{ textAlign: 'right' }}>{formatSuggestedUsd(suggestedUsd, priceDisplay, usd)}</td>
-                  <td style={{ textAlign: 'right' }}>
-                    <span className={`pill ${cls}`}>{mgnLabel}</span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="proposed-section">
-        <div className="proposed-header">
-          <div className="section-title">Proposed catalog</div>
-          <span className="proposed-meta">
-            {proposed.length} tiers · host {hostCap.binding} ·{' '}
-            {smallestFit != null ? `≥${smallestFit} VMs/host (smallest shown)` : 'no tiers match filters'}
-          </span>
+        <div className="params-tabs vm-pricing-tabs" role="tablist" aria-label="VM pricing views">
+          <button
+            type="button"
+            className={`param-tab${activeTab === 'compare' ? ' active' : ''}`}
+            role="tab"
+            aria-selected={activeTab === 'compare'}
+            aria-controls="vm-pricing-compare"
+            id="vm-tab-compare"
+            onClick={() => setActiveTab('compare')}
+          >
+            VM pricing vs catalog ({plans.length} plans)
+          </button>
+          <button
+            type="button"
+            className={`param-tab${activeTab === 'proposed' ? ' active' : ''}`}
+            role="tab"
+            aria-selected={activeTab === 'proposed'}
+            aria-controls="vm-pricing-proposed"
+            id="vm-tab-proposed"
+            onClick={() => setActiveTab('proposed')}
+          >
+            Proposed catalog
+          </button>
         </div>
-        <ProposedCatalogFilters filters={catalogFilters} onChange={setCatalogFilters} />
-        <div className="vm-table-wrap vm-table-wrap--proposed">
-          <table className="vm-table">
-            <thead>
-              <tr>
-                <th>Spec</th>
-                <th>Units</th>
-                <th>Fit</th>
-                <th style={{ textAlign: 'right' }}>Break-even</th>
-                <th style={{ textAlign: 'right' }}>Suggested</th>
-              </tr>
-            </thead>
-            <tbody>
-              {proposed.length === 0 ? (
+      </div>
+
+      {activeTab === 'compare' && (
+        <div id="vm-pricing-compare" role="tabpanel" aria-labelledby="vm-tab-compare">
+          <div className="vm-table-wrap">
+            <table className="vm-table">
+              <thead>
                 <tr>
-                  <td colSpan={5} className="proposed-empty">
-                    No tiers match filters. Lower min fit or widen max vCPU/RAM.
-                  </td>
+                  <th>Plan</th>
+                  <th>Spec</th>
+                  <th style={{ textAlign: 'right' }}>Listed</th>
+                  <th style={{ textAlign: 'right' }}>Break-even</th>
+                  <th style={{ textAlign: 'right' }}>Target (+{marginPct}%)</th>
+                  <th style={{ textAlign: 'right' }}>Suggested</th>
+                  <th style={{ textAlign: 'right' }}>vs target</th>
                 </tr>
-              ) : (
-                proposed.map((pl) => {
+              </thead>
+              <tbody>
+                {catalogSuggestions.map(({ plan: pl, suggestedUsd }) => {
                   const beDzd = planBreakEvenDzd(pl, P, C);
+                  const targetDzd = beDzd / (1 - P.margin);
                   const beUsd = beDzd / usd;
+                  const targetUsd = targetDzd / usd;
+                  const listedVal = priceDisplay === 'dzd' ? listedDzd(pl, usd) : pl.monthly_usd;
+                  const targetVal = priceDisplay === 'dzd' ? targetDzd : targetUsd;
+                  const mgn = ((listedVal - targetVal) / targetVal) * 100;
+                  const cls = mgn >= 0 ? 'pill-ok' : mgn > -25 ? 'pill-warn' : 'pill-bad';
+                  const mgnLabel = mgn >= 0 ? `+${Math.round(mgn)}%` : `${Math.round(mgn)}%`;
                   const beFmt = formatModelPrice(beDzd, beUsd, priceDisplay, 'cost');
-                  const fit = pl.fit;
-                  const fitCls = `pill fit-${fit}`;
+                  const targetFmt = formatModelPrice(targetDzd, targetUsd, priceDisplay);
+                  const mismatch = unitsMismatch(pl);
 
                   return (
                     <tr key={pl.id}>
+                      <td>
+                        <div>{pl.name}</div>
+                        <div className="plan-id">{pl.id}</div>
+                        {mismatch && (
+                          <div className="units-warn" title="Canonical units = ceil(RAM GiB)">
+                            units {pl.units} → {canonicalUnits(pl.memory)}
+                          </div>
+                        )}
+                      </td>
                       <td style={{ color: 'var(--color-text-secondary)' }}>
                         {pl.vcpus}c · {pl.memory}G · {pl.disk}G · {pl.transfer}T
                       </td>
-                      <td>{pl.units}</td>
-                      <td>
-                        <span className={fitCls} title={fitLabel(fit, pl.maxPerServer)}>
-                          {fit} · {fitLabel(fit, pl.maxPerServer)}
-                        </span>
-                      </td>
+                      <td style={{ textAlign: 'right' }}>{formatListed(pl, priceDisplay, usd)}</td>
                       <td style={{ textAlign: 'right' }}>
                         {beFmt.main}
                         {beFmt.sub && <span className="price-sub">{beFmt.sub}</span>}
                       </td>
-                      <td style={{ textAlign: 'right' }}>{formatSuggestedUsd(pl.suggestedUsd, priceDisplay, usd)}</td>
+                      <td style={{ textAlign: 'right' }}>{targetFmt.main}</td>
+                      <td style={{ textAlign: 'right' }}>{formatSuggestedUsd(suggestedUsd, priceDisplay, usd)}</td>
+                      <td style={{ textAlign: 'right' }}>
+                        <span className={`pill ${cls}`}>{mgnLabel}</span>
+                      </td>
                     </tr>
                   );
-                })
-              )}
-            </tbody>
-          </table>
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
+
+      {activeTab === 'proposed' && (
+        <div id="vm-pricing-proposed" className="proposed-section" role="tabpanel" aria-labelledby="vm-tab-proposed">
+          <div className="proposed-header">
+            <span className="proposed-meta">
+              {proposed.length} tiers · host {hostCap.binding} ·{' '}
+              {smallestFit != null ? `≥${smallestFit} VMs/host (smallest shown)` : 'no tiers match filters'}
+            </span>
+          </div>
+          <ProposedCatalogFilters filters={catalogFilters} onChange={setCatalogFilters} />
+          <div className="vm-table-wrap">
+            <table className="vm-table">
+              <thead>
+                <tr>
+                  <th>Spec</th>
+                  <th>Units</th>
+                  <th>Fit</th>
+                  <th style={{ textAlign: 'right' }}>Break-even</th>
+                  <th style={{ textAlign: 'right' }}>Suggested</th>
+                </tr>
+              </thead>
+              <tbody>
+                {proposed.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="proposed-empty">
+                      No tiers match filters. Lower min fit or widen max vCPU/RAM.
+                    </td>
+                  </tr>
+                ) : (
+                  proposed.map((pl) => {
+                    const beDzd = planBreakEvenDzd(pl, P, C);
+                    const beUsd = beDzd / usd;
+                    const beFmt = formatModelPrice(beDzd, beUsd, priceDisplay, 'cost');
+                    const fit = pl.fit;
+                    const fitCls = `pill fit-${fit}`;
+
+                    return (
+                      <tr key={pl.id}>
+                        <td style={{ color: 'var(--color-text-secondary)' }}>
+                          {pl.vcpus}c · {pl.memory}G · {pl.disk}G · {pl.transfer}T
+                        </td>
+                        <td>{pl.units}</td>
+                        <td>
+                          <span className={fitCls} title={fitLabel(fit, pl.maxPerServer)}>
+                            {fit} · {fitLabel(fit, pl.maxPerServer)}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          {beFmt.main}
+                          {beFmt.sub && <span className="price-sub">{beFmt.sub}</span>}
+                        </td>
+                        <td style={{ textAlign: 'right' }}>{formatSuggestedUsd(pl.suggestedUsd, priceDisplay, usd)}</td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <p className="footnote footnote--vm" dangerouslySetInnerHTML={{ __html: priceFootnote(priceDisplay, usd) }} />
       <div className="metrics-grid">

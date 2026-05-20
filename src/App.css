@@ -41,6 +41,8 @@ body{font-family:var(--font-sans,system-ui,-apple-system,sans-serif);color:var(-
 .fit-risky{background:#FCEBEB;color:#A32D2D}
 .fit-over{background:#eee;color:#666}
 .vm-card-header{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:.65rem}
+.vm-pricing-tabs{margin-bottom:0;width:100%}
+.proposed-section.proposed-section{margin-top:0;padding-top:0;border-top:none}
 .units-warn{font-size:9px;color:var(--color-text-warning,#854f0b);margin-top:2px}
 .proposed-section{margin-top:1rem;padding-top:.85rem;border-top:0.5px solid var(--color-border-tertiary,#eee)}
 .proposed-header{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:.5rem}
