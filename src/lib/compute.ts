@@ -18,7 +18,7 @@ export function compute(params: ModelParams, scenario: Scenario): ComputeResult 
   const monthly_bw = (P.bw_mbps / Math.max(P.num_servers, 1)) * P.bw_dzd_mbps;
   const monthly_storage = P.nvme_tb_per_server * 1024 * P.disk_dzd_per_gb_mo;
 
-  const sellable_by_ram = P.ram_gb / P.ram_oversub / P.avg_vm_ram;
+  const sellable_by_ram = (P.ram_gb * P.ram_oversub) / P.avg_vm_ram;
   const sellable_by_cpu = (P.cpu_cores * P.cpu_oversub) / Math.max(P.avg_vm_vcpu, 0.5);
   const sellable_by_disk = (P.nvme_tb_per_server * 1024) / Math.max(P.avg_vm_disk_gb, 1);
   const sellable_vms = Math.floor(Math.min(sellable_by_ram, sellable_by_cpu, sellable_by_disk));

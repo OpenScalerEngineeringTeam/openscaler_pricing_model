@@ -8,7 +8,7 @@ export function maxPerServer(
   pl: Pick<Plan, 'memory' | 'vcpus' | 'disk'>,
   P: ModelParams,
 ): number {
-  const byRam = P.ram_gb / P.ram_oversub / Math.max(pl.memory, 0.25);
+  const byRam = (P.ram_gb * P.ram_oversub) / Math.max(pl.memory, 0.25);
   const byCpu = (P.cpu_cores * P.cpu_oversub) / Math.max(pl.vcpus, 0.5);
   const byDisk = (P.nvme_tb_per_server * 1024) / Math.max(pl.disk, 1);
   return Math.floor(Math.min(byRam, byCpu, byDisk));
@@ -34,7 +34,7 @@ export interface HostCapacitySummary {
 }
 
 export function hostCapacitySummary(P: ModelParams): HostCapacitySummary {
-  const sellableRamGiB = P.ram_gb / P.ram_oversub;
+  const sellableRamGiB = P.ram_gb * P.ram_oversub;
   const sellableVcpus = P.cpu_cores * P.cpu_oversub;
   const sellableDiskGb = P.nvme_tb_per_server * 1024;
   const limits: [HostCapacitySummary['binding'], number][] = [

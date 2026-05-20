@@ -20,6 +20,13 @@ describe('canonicalUnits', () => {
 describe('maxPerServer', () => {
   const P = DEFAULT_PARAMS;
 
+  it('fits more VMs per host when RAM oversubscription increases', () => {
+    const ramHeavy = { memory: 16, vcpus: 2, disk: 100 };
+    const low = maxPerServer(ramHeavy, { ...P, ram_oversub: 1 });
+    const high = maxPerServer(ramHeavy, { ...P, ram_oversub: 1.5 });
+    expect(high).toBeGreaterThan(low);
+  });
+
   it('limits large RAM plans by RAM on default host', () => {
     const big = DEFAULT_PLANS.find((p) => p.id === 'b-8-32-640')!;
     const max = maxPerServer(big, P);
@@ -53,7 +60,7 @@ describe('fitLabel', () => {
 describe('hostCapacitySummary', () => {
   it('reports binding constraint for default host', () => {
     const s = hostCapacitySummary(DEFAULT_PARAMS);
-    expect(s.sellableRamGiB).toBeCloseTo(128 / 1.2);
+    expect(s.sellableRamGiB).toBeCloseTo(128 * 1.2);
     expect(s.sellableVcpus).toBe(96);
     expect(s.sellableDiskGb).toBe(4096);
     expect(['RAM', 'CPU', 'Disk']).toContain(s.binding);
