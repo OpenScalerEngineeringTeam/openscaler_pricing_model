@@ -110,6 +110,7 @@ export default function App() {
             samples: ui.optimizer?.samples ?? prev.samples,
             seed: ui.optimizer?.seed ?? prev.seed,
           }));
+          flashSave('Loaded');
         } catch (err) {
           alert(`Could not load config: ${(err as Error).message || String(err)}`);
         }
@@ -117,7 +118,7 @@ export default function App() {
       reader.onerror = () => alert('Could not read the selected file.');
       reader.readAsText(file);
     },
-    [],
+    [flashSave],
   );
 
   const setParam = useCallback((key: keyof ModelParams, value: number) => {

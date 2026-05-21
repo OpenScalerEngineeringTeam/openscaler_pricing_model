@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_PARAMS } from './constants';
 import { applyConfigDocument, buildConfigDocument, CONFIG_VERSION } from './config';
+import { DEFAULT_PARAMS } from './constants';
 import { initialOptimizerSession } from './optimizerState';
 
 describe('config optimizer section', () => {
@@ -12,7 +12,7 @@ describe('config optimizer section', () => {
     const doc = buildConfigDocument(DEFAULT_PARAMS, 'p2', 'usd', 'fx', true, optimizer);
     expect(doc.optimizer?.objective_weights.profit).toBeCloseTo(0.5, 5);
 
-    const applied = applyConfigDocument(doc, () => {});
+    const applied = applyConfigDocument(doc, () => { });
     expect(applied.optimizer?.weights?.profit).toBeCloseTo(0.5, 5);
     expect(applied.optimizer?.pins).toBeDefined();
     expect(applied.optimizer?.samples).toBe(optimizer.samples);
@@ -23,7 +23,7 @@ describe('config optimizer section', () => {
       freezePrices: true,
       freezeUtilization: 0.45,
     });
-    const applied = applyConfigDocument(doc, () => {});
+    const applied = applyConfigDocument(doc, () => { });
     expect(applied.freezePrices).toBe(true);
     expect(applied.freezeUtilization).toBeCloseTo(0.45, 5);
   });
