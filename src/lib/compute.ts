@@ -18,13 +18,15 @@ export function compute(params: ModelParams, scenario: Scenario, hwFromComponent
   const monthly_power = (P.server_w * P.pue * 720) / 1000 * P.power_dzd_kwh;
   const monthly_rack = P.rack_per_u_dzd * P.rack_u;
   const monthly_bw = (P.bw_mbps / Math.max(P.num_servers, 1)) * P.bw_dzd_mbps;
-  const monthly_storage = P.nvme_tb_per_server * 1024 * P.disk_dzd_per_gb_mo;
-
   const sellable_by_ram = (P.ram_gb * P.ram_oversub) / P.avg_vm_ram;
   const sellable_by_cpu = (P.cpu_cores * P.cpu_oversub) / Math.max(P.avg_vm_vcpu, 0.5);
   const sellable_by_disk = (P.nvme_tb_per_server * 1024) / Math.max(P.avg_vm_disk_gb, 1);
   const sellable_vms = Math.floor(Math.min(sellable_by_ram, sellable_by_cpu, sellable_by_disk));
   const paying_vms = sellable_vms * P.utilization;
+
+  const physical_disk_gb = P.nvme_tb_per_server * 1024;
+  const provisioned_disk_gb = Math.min(paying_vms * P.avg_vm_disk_gb, physical_disk_gb);
+  const monthly_storage = provisioned_disk_gb * P.disk_dzd_per_gb_mo;
 
   const monthly_team = (P.team_people * P.salary_dzd) / Math.max(P.num_servers, 1);
   const monthly_misc = (hw_landed_dzd * 0.05) / 12 + 2000;
