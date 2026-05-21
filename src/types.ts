@@ -114,8 +114,8 @@ export interface CatalogFilters {
 }
 
 export const DEFAULT_CATALOG_FILTERS: CatalogFilters = {
-  maxVcpus: 16,
-  maxRam: 64,
+  maxVcpus: Number.MAX_SAFE_INTEGER,
+  maxRam: Number.MAX_SAFE_INTEGER,
   maxRows: 30,
   minFit: 4,
   hideDuplicates: true,
