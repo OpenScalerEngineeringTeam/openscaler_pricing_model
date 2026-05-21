@@ -4,6 +4,8 @@ Recommended default pricing for server components at **Taiwan/Asia wholesale/OEM
 
 **Reference config:** 1 socket, 128 GiB RAM, 4 TB NVMe (matches default host capacity in the cost model).
 
+**Optimizer “optimal” host (48c / 256 GiB / 5 TB):** see [optimal-host-spec.md](./optimal-host-spec.md) and [`optimal-host-spec.json`](./optimal-host-spec.json).
+
 ## Executive summary
 
 2026 market conditions show strong AI-driven demand: **DRAM** and **enterprise NVMe** are up sharply; CPU and motherboard pricing is more stable but elevated on newer generations (e.g. AMD EPYC 9005 “Turin”). These defaults suit bulk/cloud-scale purchasing and BOM / TCO modeling. They are higher than early 2024–2025 ballparks in `cloud_service_pricing_model_breakdown.md`.

@@ -21,30 +21,6 @@ export function ProposedCatalogFilters({ filters, onChange }: ProposedCatalogFil
       <div className="catalog-filters-body">
         <div className="catalog-filters-grid">
           <label className="filter-field">
-            <span>Max vCPUs</span>
-            <input
-              type="range"
-              min={1}
-              max={32}
-              step={1}
-              value={filters.maxVcpus}
-              onChange={(e) => setField('maxVcpus', Number(e.target.value))}
-            />
-            <span className="filter-val">{filters.maxVcpus}</span>
-          </label>
-          <label className="filter-field">
-            <span>Max RAM (GiB)</span>
-            <input
-              type="range"
-              min={1}
-              max={128}
-              step={1}
-              value={filters.maxRam}
-              onChange={(e) => setField('maxRam', Number(e.target.value))}
-            />
-            <span className="filter-val">{filters.maxRam}</span>
-          </label>
-          <label className="filter-field">
             <span>Max rows</span>
             <input
               type="range"
