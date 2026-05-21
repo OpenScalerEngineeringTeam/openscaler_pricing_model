@@ -1,15 +1,17 @@
 {
   "_meta": {
     "format": "openscaler-cost-model",
-    "format_version": 4,
-    "saved_at": "2026-05-21T01:13:41.799Z",
-    "description": "Pinned copy for docs/reference/optimal-host-spec.md — load in app via Import or sync from saves/optimal.json"
+    "format_version": 5,
+    "saved_at": "2026-05-21T03:31:55.683Z",
+    "description": "Pinned copy for docs/reference/optimal-host-spec.md — load in app via Import or sync from saves/competitiv-and-profitable.json"
   },
   "ui": {
     "scenario": "p2",
     "price_display": "dzd",
-    "active_param_tab": "host",
-    "hw_from_components": true
+    "active_param_tab": "fleet",
+    "hw_from_components": true,
+    "freeze_prices": true,
+    "freeze_utilization": 0.85
   },
   "parameters": {
     "usd_dzd": 135,
@@ -29,22 +31,22 @@
     "rack_per_u_dzd": 3000,
     "bw_mbps": 1000,
     "bw_dzd_mbps": 5,
-    "num_servers": 50,
+    "num_servers": 20,
     "team_people": 1,
     "salary_dzd": 110000,
-    "cpu_cores": 48,
-    "cpu_oversub": 5,
-    "ram_gb": 256,
-    "ram_oversub": 1.1,
-    "nvme_tb_per_server": 5,
+    "cpu_cores": 60,
+    "cpu_oversub": 5.5,
+    "ram_gb": 512,
+    "ram_oversub": 1.15,
+    "nvme_tb_per_server": 11,
     "disk_dzd_per_gb_mo": 3,
     "transfer_dzd_per_tb_mo": 150,
-    "avg_vm_ram": 2,
+    "avg_vm_ram": 4,
     "avg_vm_vcpu": 2,
-    "avg_vm_disk_gb": 40,
+    "avg_vm_disk_gb": 80,
     "avg_vm_transfer_tb": 4,
-    "utilization": 0.7,
-    "margin": 0.4
+    "utilization": 0.55,
+    "margin": 0.5
   },
   "optimizer": {
     "objective_weights": {
@@ -61,10 +63,10 @@
       "hw_usd_per_tb_nvme": true,
       "hw_usd_motherboard": true,
       "hw_usd_chassis_misc": true,
-      "cpu_cores": true,
-      "cpu_oversub": true,
+      "cpu_cores": false,
+      "cpu_oversub": false,
       "ram_gb": false,
-      "ram_oversub": true,
+      "ram_oversub": false,
       "nvme_tb_per_server": false,
       "server_w": true,
       "pue": true,
@@ -81,7 +83,7 @@
       "utilization": true,
       "margin": true
     },
-    "samples": 10000,
+    "samples": 5000,
     "seed": 42
   }
 }

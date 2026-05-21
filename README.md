@@ -12,7 +12,7 @@ pnpm dev       # http://localhost:5173
 | Path                                                                                           | Purpose                                                                                                                                                 |
 | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [`docs/reference/hardware-bom-defaults-2026.md`](docs/reference/hardware-bom-defaults-2026.md) | **Source of truth** for Phase 2 hardware unit prices ($/socket, $/GiB RAM, $/TB NVMe, etc.) and manual server BOM default (~$5.9k for 1×128 GiB×4 TB)   |
-| [`docs/reference/optimal-host-spec.md`](docs/reference/optimal-host-spec.md)                   | Optimizer “optimal” host (48c / 256 GiB / 5 TB): real-world build notes + pinned save [`optimal-host-spec.json`](docs/reference/optimal-host-spec.json) |
+| [`docs/reference/optimal-host-spec.md`](docs/reference/optimal-host-spec.md)                   | Production host (60c / 512 GiB / 11 TB), frozen catalog prices, pinned save [`optimal-host-spec.json`](docs/reference/optimal-host-spec.json) |
 | [`cloud_service_pricing_model_breakdown.md`](cloud_service_pricing_model_breakdown.md)         | Earlier cost-model conversation and protocol (older hardware ballparks)                                                                                 |
 
 App defaults in `src/lib/hardwareCost.ts` and `src/lib/constants.ts` follow the 2026 BOM reference unless you override them in the UI or a saved config.

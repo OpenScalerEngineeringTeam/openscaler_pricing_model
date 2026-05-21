@@ -4,7 +4,7 @@ Recommended default pricing for server components at **Taiwan/Asia wholesale/OEM
 
 **Reference config:** 1 socket, 128 GiB RAM, 4 TB NVMe (matches default host capacity in the cost model).
 
-**Optimizer “optimal” host (48c / 256 GiB / 5 TB):** see [optimal-host-spec.md](./optimal-host-spec.md) and [`optimal-host-spec.json`](./optimal-host-spec.json).
+**Production host (60c / 512 GiB / 11 TB, competitive pricing):** see [optimal-host-spec.md](./optimal-host-spec.md) and [`optimal-host-spec.json`](./optimal-host-spec.json).
 
 ## Executive summary
 
