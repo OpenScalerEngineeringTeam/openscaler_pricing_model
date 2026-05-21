@@ -6,6 +6,7 @@ import {
   enumerateSteps,
   getOptimizerControlFields,
   getParamBounds,
+  randomParamNearBaseline,
   snapParam,
 } from './paramBounds';
 
@@ -63,6 +64,16 @@ describe('defaultOptimizerPins', () => {
     for (const key of OPTIMIZER_EXCLUDED_KEYS) {
       expect(pins[key]).toBeUndefined();
     }
+  });
+});
+
+describe('randomParamNearBaseline', () => {
+  it('samples near baseline value', () => {
+    const bound = { min: 1, max: 10, step: 1 };
+    const rng = () => 0.5;
+    const v = randomParamNearBaseline(5, bound, 0.35, rng);
+    expect(v).toBeGreaterThanOrEqual(1);
+    expect(v).toBeLessThanOrEqual(10);
   });
 });
 

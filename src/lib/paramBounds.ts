@@ -115,16 +115,39 @@ export function randomParamInBounds(bound: ParamBound, rng: () => number): numbe
   return steps[Math.floor(rng() * steps.length)] ?? bound.min;
 }
 
+/** Sample within ±radius of slider span around baseline, then snap to step grid. */
+export function randomParamNearBaseline(
+  baselineValue: number,
+  bound: ParamBound,
+  radius: number,
+  rng: () => number,
+): number {
+  const span = bound.max - bound.min;
+  const half = radius * span;
+  const lo = Math.max(bound.min, baselineValue - half);
+  const hi = Math.min(bound.max, baselineValue + half);
+  const raw = lo + rng() * (hi - lo);
+  return snapParam(raw, bound);
+}
+
+export const DEFAULT_LOCAL_SAMPLE_RADIUS = 0.35;
+
 export function applyFreeParams(
   baseline: ModelParams,
   freeKeys: (keyof ModelParams)[],
   bounds: Partial<Record<keyof ModelParams, ParamBound>>,
   rng: () => number,
+  options?: { localRadius?: number },
 ): ModelParams {
   const next = { ...baseline };
+  const radius = options?.localRadius;
   for (const key of freeKeys) {
     const bound = bounds[key];
-    if (bound) next[key] = randomParamInBounds(bound, rng) as ModelParams[typeof key];
+    if (!bound) continue;
+    next[key] =
+      radius !== undefined
+        ? (randomParamNearBaseline(baseline[key], bound, radius, rng) as ModelParams[typeof key])
+        : (randomParamInBounds(bound, rng) as ModelParams[typeof key]);
   }
   return next;
 }

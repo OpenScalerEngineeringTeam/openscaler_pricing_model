@@ -108,7 +108,11 @@ input[type=range]{width:100%;height:6px;accent-color:#378ADD;cursor:pointer}
 .optimizer-field{display:flex;flex-direction:column;gap:4px;margin-bottom:.65rem;font-size:12px}
 .optimizer-field span{color:var(--color-text-secondary,#666)}
 .optimizer-field select,.optimizer-field input[type=number]{padding:6px 8px;border:0.5px solid var(--color-border-secondary,#ccc);border-radius:8px;font-size:12px}
-.optimizer-risk-caps{margin-top:.5rem;padding-top:.5rem;border-top:0.5px solid var(--color-border-tertiary,#eee)}
+.optimizer-weights-hint{margin-bottom:.5rem}
+.optimizer-weight-row{display:flex;flex-direction:column;gap:4px;margin-bottom:.5rem;font-size:12px}
+.optimizer-weight-label{color:var(--color-text-secondary,#666)}
+.optimizer-weight-row input[type=range]{width:100%;accent-color:#378ADD}
+.optimizer-guardrails{margin-top:.65rem;padding-top:.5rem;border-top:0.5px solid var(--color-border-tertiary,#eee)}
 .optimizer-settings{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:.5rem}
 .optimizer-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:.5rem}
 .optimizer-error{font-size:12px;color:var(--color-text-danger,#b42318);margin-top:.5rem}
@@ -126,4 +130,5 @@ input[type=range]{width:100%;height:6px;accent-color:#378ADD;cursor:pointer}
 .optimizer-badge{font-size:11px;padding:3px 8px;border-radius:6px;background:var(--color-background-secondary,#f0f0eb);color:var(--color-text-secondary,#666)}
 .optimizer-badge.success{background:#e8f5e0;color:var(--color-text-success,#3b6d11)}
 .optimizer-table td.optimizer-changed{font-size:10px;color:var(--color-text-secondary,#666);max-width:180px}
+.optimizer-table td.optimizer-subscores{font-size:10px;color:var(--color-text-secondary,#666);white-space:nowrap}
 .optimizer-apply-row{margin-top:.75rem}

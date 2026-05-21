@@ -1,24 +1,30 @@
 import {
   applyFreeParams,
+  DEFAULT_LOCAL_SAMPLE_RADIUS,
   enumerateSteps,
   getParamBounds,
   snapParam,
   type ParamBound,
 } from './paramBounds';
-import { evaluateObjective, type ObjectiveConstraints, type ObjectiveEvaluation, type ObjectiveId } from './objectives';
+import {
+  evaluateBalancedObjective,
+  type BalancedEvaluateContext,
+  type ObjectiveEvaluation,
+} from './objectives';
 import type { ModelParams, Scenario } from '../types';
+import type { ObjectiveWeights } from './objectives';
 
 export interface SearchOptions {
   baseline: ModelParams;
   freeKeys: (keyof ModelParams)[];
-  objectiveId: ObjectiveId;
-  constraints: ObjectiveConstraints;
+  weights: ObjectiveWeights;
   scenario: Scenario;
   hwFromComponents: boolean;
   samples?: number;
   seed?: number;
   topK?: number;
   refinePasses?: number;
+  localRadius?: number;
 }
 
 export interface SearchResult {
@@ -41,6 +47,16 @@ export function createRng(seed: number): () => number {
   };
 }
 
+function makeContext(
+  baseline: ModelParams,
+  freeKeys: (keyof ModelParams)[],
+  weights: ObjectiveWeights,
+  scenario: Scenario,
+  hwFromComponents: boolean,
+): BalancedEvaluateContext {
+  return { baseline, freeKeys, weights, scenario, hwFromComponents };
+}
+
 function mergeCandidate(
   baseline: ModelParams,
   freeKeys: (keyof ModelParams)[],
@@ -57,13 +73,10 @@ function coordinateRefine(
   start: ModelParams,
   freeKeys: (keyof ModelParams)[],
   bounds: Partial<Record<keyof ModelParams, ParamBound>>,
-  objectiveId: ObjectiveId,
-  constraints: ObjectiveConstraints,
-  scenario: Scenario,
-  hwFromComponents: boolean,
+  ctx: BalancedEvaluateContext,
   passes: number,
 ): ObjectiveEvaluation {
-  let best = evaluateObjective(start, objectiveId, constraints, scenario, hwFromComponents);
+  let best = evaluateBalancedObjective(start, ctx);
 
   for (let pass = 0; pass < passes; pass++) {
     let improved = false;
@@ -84,7 +97,7 @@ function coordinateRefine(
 
       for (const value of tryOrder) {
         const candidate = mergeCandidate(best.params, freeKeys, { [key]: snapParam(value, bound) });
-        const ev = evaluateObjective(candidate, objectiveId, constraints, scenario, hwFromComponents);
+        const ev = evaluateBalancedObjective(candidate, ctx);
         if (ev.feasible && ev.score > best.score) {
           best = ev;
           improved = true;
@@ -110,19 +123,20 @@ export function runSearch(options: SearchOptions): SearchResult {
   const {
     baseline,
     freeKeys,
-    objectiveId,
-    constraints,
+    weights,
     scenario,
     hwFromComponents,
     samples = 1000,
     seed = 42,
     topK = 10,
     refinePasses = 2,
+    localRadius = DEFAULT_LOCAL_SAMPLE_RADIUS,
   } = options;
 
   const bounds = getParamBounds(scenario, hwFromComponents);
   const rng = createRng(seed);
-  const baselineEv = evaluateObjective(baseline, objectiveId, constraints, scenario, hwFromComponents);
+  const ctx = makeContext(baseline, freeKeys, weights, scenario, hwFromComponents);
+  const baselineEv = evaluateBalancedObjective(baseline, ctx);
 
   if (freeKeys.length === 0) {
     return {
@@ -140,23 +154,14 @@ export function runSearch(options: SearchOptions): SearchResult {
   let best = baselineEv;
 
   for (let i = 0; i < samples; i++) {
-    const candidate = applyFreeParams(baseline, freeKeys, bounds, rng);
-    const ev = evaluateObjective(candidate, objectiveId, constraints, scenario, hwFromComponents);
+    const candidate = applyFreeParams(baseline, freeKeys, bounds, rng, { localRadius });
+    const ev = evaluateBalancedObjective(candidate, ctx);
     insertTop(top, ev, topK);
     if (ev.feasible && ev.score > best.score) best = ev;
   }
 
   if (best.feasible) {
-    const refined = coordinateRefine(
-      best.params,
-      freeKeys,
-      bounds,
-      objectiveId,
-      constraints,
-      scenario,
-      hwFromComponents,
-      refinePasses,
-    );
+    const refined = coordinateRefine(best.params, freeKeys, bounds, ctx, refinePasses);
     insertTop(top, refined, topK);
     if (refined.feasible && refined.score > best.score) best = refined;
   }
@@ -174,11 +179,12 @@ export function runSearch(options: SearchOptions): SearchResult {
 
 /** Brute-force all combos for tiny grids (tests). */
 export function bruteForceSearch(
-  options: Omit<SearchOptions, 'samples' | 'seed' | 'refinePasses'>,
+  options: Omit<SearchOptions, 'samples' | 'seed' | 'refinePasses' | 'localRadius'>,
 ): SearchResult {
-  const { baseline, freeKeys, objectiveId, constraints, scenario, hwFromComponents, topK = 10 } = options;
+  const { baseline, freeKeys, weights, scenario, hwFromComponents, topK = 10 } = options;
   const bounds = getParamBounds(scenario, hwFromComponents);
-  const baselineEv = evaluateObjective(baseline, objectiveId, constraints, scenario, hwFromComponents);
+  const ctx = makeContext(baseline, freeKeys, weights, scenario, hwFromComponents);
+  const baselineEv = evaluateBalancedObjective(baseline, ctx);
 
   const grids = freeKeys.map((key) => {
     const bound = bounds[key];
@@ -193,7 +199,7 @@ export function bruteForceSearch(
     if (depth === freeKeys.length) {
       evaluated++;
       const params = mergeCandidate(baseline, freeKeys, overrides);
-      const ev = evaluateObjective(params, objectiveId, constraints, scenario, hwFromComponents);
+      const ev = evaluateBalancedObjective(params, ctx);
       insertTop(top, ev, topK);
       if (ev.feasible && ev.score > best.score) best = ev;
       return;

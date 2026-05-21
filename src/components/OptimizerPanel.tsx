@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { defaultOptimizerPins, getOptimizerControlFields } from '../lib/paramBounds';
 import {
-  OBJECTIVE_LABELS,
-  evaluateObjective,
-  type ObjectiveConstraints,
-  type ObjectiveId,
+  DEFAULT_OBJECTIVE_WEIGHTS,
+  OBJECTIVE_WEIGHT_LABELS,
+  evaluateBalancedObjective,
+  normalizeWeights,
+  type ObjectiveWeights,
 } from '../lib/objectives';
 import { runSearch, type SearchResult } from '../lib/search';
 import { fmt } from '../lib/pricing';
@@ -20,7 +21,16 @@ interface OptimizerPanelProps {
   onBack: () => void;
 }
 
-const OBJECTIVE_IDS = Object.keys(OBJECTIVE_LABELS) as ObjectiveId[];
+const WEIGHT_KEYS = Object.keys(DEFAULT_OBJECTIVE_WEIGHTS) as (keyof ObjectiveWeights)[];
+
+function formatPct(w: number): string {
+  return `${Math.round(w * 100)}%`;
+}
+
+function formatDelta(n: number, suffix: string): string {
+  const sign = n > 0 ? '+' : '';
+  return `${sign}${fmt(n)}${suffix}`;
+}
 
 export function OptimizerPanel({
   params,
@@ -41,11 +51,7 @@ export function OptimizerPanel({
     setPins(defaultOptimizerPins(scenario, hwFromComponents));
   }, [scenario, hwFromComponents]);
 
-  const [objectiveId, setObjectiveId] = useState<ObjectiveId>('maxFleetProfit');
-  const [profitFloorDzd, setProfitFloorDzd] = useState('');
-  const [refTargetUsdCap, setRefTargetUsdCap] = useState('12');
-  const [maxCpuOversub, setMaxCpuOversub] = useState('');
-  const [maxRamOversub, setMaxRamOversub] = useState('');
+  const [weights, setWeights] = useState<ObjectiveWeights>(() => ({ ...DEFAULT_OBJECTIVE_WEIGHTS }));
   const [samples, setSamples] = useState(1000);
   const [seed, setSeed] = useState(42);
   const [running, setRunning] = useState(false);
@@ -58,23 +64,30 @@ export function OptimizerPanel({
     [searchableKeys, pins],
   );
 
-  const constraints = useMemo((): ObjectiveConstraints => {
-    const c: ObjectiveConstraints = {};
-    const floor = parseFloat(profitFloorDzd);
-    if (!Number.isNaN(floor) && profitFloorDzd.trim() !== '') c.profitFloorDzd = floor;
-    const cap = parseFloat(refTargetUsdCap);
-    if (!Number.isNaN(cap) && refTargetUsdCap.trim() !== '') c.refTargetUsdCap = cap;
-    const cpu = parseFloat(maxCpuOversub);
-    if (!Number.isNaN(cpu) && maxCpuOversub.trim() !== '') c.maxCpuOversub = cpu;
-    const ram = parseFloat(maxRamOversub);
-    if (!Number.isNaN(ram) && maxRamOversub.trim() !== '') c.maxRamOversub = ram;
-    return c;
-  }, [profitFloorDzd, refTargetUsdCap, maxCpuOversub, maxRamOversub]);
+  const evalCtx = useMemo(
+    () => ({
+      baseline: params,
+      freeKeys,
+      weights: normalizeWeights(weights),
+      scenario,
+      hwFromComponents,
+    }),
+    [params, freeKeys, weights, scenario, hwFromComponents],
+  );
 
   const baselineEv = useMemo(
-    () => evaluateObjective(params, objectiveId, constraints, scenario, hwFromComponents),
-    [params, objectiveId, constraints, scenario, hwFromComponents],
+    () => evaluateBalancedObjective(params, evalCtx),
+    [params, evalCtx],
   );
+
+  const setWeight = useCallback((key: keyof ObjectiveWeights, pct: number) => {
+    const v = Math.max(0, Math.min(100, pct)) / 100;
+    setWeights((prev) => normalizeWeights({ ...prev, [key]: v }));
+  }, []);
+
+  const resetWeights = useCallback(() => {
+    setWeights({ ...DEFAULT_OBJECTIVE_WEIGHTS });
+  }, []);
 
   const togglePin = useCallback((key: keyof ModelParams) => {
     setPins((p) => ({ ...p, [key]: !p[key] }));
@@ -109,8 +122,7 @@ export function OptimizerPanel({
         const searchResult = runSearch({
           baseline: params,
           freeKeys,
-          objectiveId,
-          constraints,
+          weights: normalizeWeights(weights),
           scenario,
           hwFromComponents,
           samples,
@@ -124,7 +136,7 @@ export function OptimizerPanel({
         setRunning(false);
       }
     }, 0);
-  }, [freeKeys, params, objectiveId, constraints, scenario, hwFromComponents, samples, seed]);
+  }, [freeKeys, params, weights, scenario, hwFromComponents, samples, seed]);
 
   const handleCancel = useCallback(() => {
     cancelRef.current = true;
@@ -132,6 +144,7 @@ export function OptimizerPanel({
   }, []);
 
   const best = result?.top[0];
+  const normalized = normalizeWeights(weights);
 
   return (
     <div className="optimizer-panel">
@@ -139,9 +152,9 @@ export function OptimizerPanel({
         <div>
           <h3 className="optimizer-title">Parameter optimizer</h3>
           <p className="optimizer-desc">
-            Checked = pinned (held at your model value). By default, fleet size, ops payroll, reference VM mix, physical
-            host spec, and unit rates are pinned; oversubscription, NVMe, utilization, margin, and hardware total are
-            free. Exchange rate, import overhead, power tariff, rack, and transit price are not listed (always fixed).
+            Balanced search: improve profit and competitive pricing while keeping ops realistic and changes
+            near your current model. Checked = pinned. Exchange rate, import overhead, power, rack, and transit
+            are always fixed at model values.
           </p>
         </div>
         <button type="button" className="file-btn" onClick={onBack}>
@@ -151,79 +164,34 @@ export function OptimizerPanel({
 
       <div className="optimizer-grid">
         <section className="card optimizer-section">
-          <div className="section-title">Objective</div>
-          <label className="optimizer-field">
-            <span>Preset</span>
-            <select
-              value={objectiveId}
-              onChange={(e) => setObjectiveId(e.target.value as ObjectiveId)}
-              disabled={running}
-            >
-              {OBJECTIVE_IDS.map((id) => (
-                <option key={id} value={id}>
-                  {OBJECTIVE_LABELS[id]}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          {(objectiveId === 'minRefTargetPrice' || objectiveId === 'minCostPerPayingVm') && (
-            <label className="optimizer-field">
-              <span>Min fleet profit (DZD/mo)</span>
+          <div className="section-title">Balance priorities</div>
+          <p className="param-group-desc optimizer-weights-hint">
+            Weights always sum to 100%. Default: 40% profit, 35% price, 15% ops, 10% stability.
+          </p>
+          {WEIGHT_KEYS.map((key) => (
+            <label key={key} className="optimizer-weight-row">
+              <span className="optimizer-weight-label">
+                {OBJECTIVE_WEIGHT_LABELS[key]} ({formatPct(normalized[key])})
+              </span>
               <input
-                type="number"
+                type="range"
                 min={0}
-                placeholder={objectiveId === 'minCostPerPayingVm' ? 'optional' : 'required'}
-                value={profitFloorDzd}
-                onChange={(e) => setProfitFloorDzd(e.target.value)}
+                max={100}
+                step={5}
+                value={Math.round(weights[key] * 100)}
+                onChange={(e) => setWeight(key, +e.target.value)}
                 disabled={running}
               />
             </label>
-          )}
+          ))}
+          <button type="button" className="file-btn file-btn--sm" onClick={resetWeights} disabled={running}>
+            Reset to balanced
+          </button>
 
-          {objectiveId === 'maxFleetProfitUnderPriceCap' && (
-            <label className="optimizer-field">
-              <span>Max reference target ($/mo)</span>
-              <input
-                type="number"
-                min={0}
-                step={0.5}
-                value={refTargetUsdCap}
-                onChange={(e) => setRefTargetUsdCap(e.target.value)}
-                disabled={running}
-              />
-            </label>
-          )}
-
-          <div className="optimizer-risk-caps">
-            <div className="param-group-desc">Optional risk caps (leave empty to ignore)</div>
-            <label className="optimizer-field">
-              <span>Max CPU oversub</span>
-              <input
-                type="number"
-                min={1}
-                max={10}
-                step={0.5}
-                placeholder="—"
-                value={maxCpuOversub}
-                onChange={(e) => setMaxCpuOversub(e.target.value)}
-                disabled={running}
-              />
-            </label>
-            <label className="optimizer-field">
-              <span>Max RAM oversub</span>
-              <input
-                type="number"
-                min={1}
-                max={2}
-                step={0.05}
-                placeholder="—"
-                value={maxRamOversub}
-                onChange={(e) => setMaxRamOversub(e.target.value)}
-                disabled={running}
-              />
-            </label>
-          </div>
+          <p className="optimizer-guardrails param-group-desc">
+            Guardrails: CPU oversub ≤ 5×, RAM ≤ 1.35×, utilization ≤ 90%, margin 15–45%, salary/team ≥
+            baseline when unpinned.
+          </p>
 
           <div className="optimizer-settings">
             <label className="optimizer-field">
@@ -297,16 +265,16 @@ export function OptimizerPanel({
         <div className="section-title">Current baseline</div>
         <div className="metrics-grid">
           <div className="metric">
+            <div className="metric-label">Balance score</div>
+            <div className="metric-value">{baselineEv.score.toFixed(3)}</div>
+          </div>
+          <div className="metric">
             <div className="metric-label">Fleet profit / mo</div>
             <div className="metric-value">{fmt(baselineEv.metrics.fleetProfitDzd)} DZD</div>
           </div>
           <div className="metric">
             <div className="metric-label">Ref target</div>
             <div className="metric-value">${baselineEv.metrics.refTargetUsd.toFixed(2)}</div>
-          </div>
-          <div className="metric">
-            <div className="metric-label">Cost / paying VM</div>
-            <div className="metric-value">{fmt(baselineEv.metrics.costPerPayingVm)} DZD</div>
           </div>
           <div className="metric">
             <div className="metric-label">Paying VMs / host</div>
@@ -333,11 +301,12 @@ export function OptimizerPanel({
                 <tr>
                   <th>#</th>
                   <th>Score</th>
+                  <th>Profit Δ</th>
+                  <th>Price Δ</th>
                   <th>Fleet profit</th>
-                  <th>Ref target $</th>
-                  <th>Cost/VM</th>
+                  <th>Ref $</th>
                   <th>Paying/host</th>
-                  <th>Binding</th>
+                  <th>Sub-scores</th>
                   <th>Changed</th>
                 </tr>
               </thead>
@@ -346,15 +315,24 @@ export function OptimizerPanel({
                   const changed = freeKeys
                     .filter((k) => row.params[k] !== params[k])
                     .map((k) => fields.find((f) => f.key === k)?.label ?? k);
+                  const sub = row.metrics.subScores;
                   return (
                     <tr key={i}>
                       <td>{i + 1}</td>
-                      <td>{row.score === Number.NEGATIVE_INFINITY ? '—' : row.score.toFixed(2)}</td>
+                      <td>{row.score.toFixed(3)}</td>
+                      <td>{formatDelta(row.metrics.profitDeltaDzd, ' DZD')}</td>
+                      <td>
+                        {row.metrics.refTargetUsdDelta === 0
+                          ? '—'
+                          : `${row.metrics.refTargetUsdDelta > 0 ? '+' : ''}$${row.metrics.refTargetUsdDelta.toFixed(2)}`}
+                      </td>
                       <td>{fmt(row.metrics.fleetProfitDzd)}</td>
                       <td>${row.metrics.refTargetUsd.toFixed(2)}</td>
-                      <td>{fmt(row.metrics.costPerPayingVm)}</td>
                       <td>{row.metrics.payingVms.toFixed(1)}</td>
-                      <td>{row.metrics.binding}</td>
+                      <td className="optimizer-subscores" title="Profit / Price / Ops / Stability">
+                        {sub.profitNorm.toFixed(2)} / {sub.priceNorm.toFixed(2)} / {sub.opsNorm.toFixed(2)} /{' '}
+                        {sub.stabilityNorm.toFixed(2)}
+                      </td>
                       <td className="optimizer-changed">{changed.length ? changed.join(', ') : '—'}</td>
                     </tr>
                   );
