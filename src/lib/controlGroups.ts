@@ -114,7 +114,7 @@ export function getControlGroups(scenario: Scenario, options: ControlGroupOption
         { key: 'avg_vm_vcpu', label: 'Ref VM vCPUs', min: 1, max: 16, step: 1, unit: 'vCPU', tip: 'Average vCPUs per paying VM for capacity counting. Plans scale vs max(RAM/ref, vCPU/ref).' },
         { key: 'avg_vm_disk_gb', label: 'Ref VM disk', min: 10, max: 500, step: 5, unit: 'GB', tip: 'Average provisioned disk per VM for host disk capacity limits (sellable slots).' },
         { key: 'avg_vm_transfer_tb', label: 'Ref VM transfer', min: 0.5, max: 50, step: 0.5, fmt: (v) => v.toFixed(1), unit: 'TB/mo', tip: 'Average included egress per VM in the catalog — used for host-level egress budgeting in older logic; per-plan transfer is priced directly.' },
-        { key: 'utilization', label: 'Target utilization', min: 0.3, max: 0.95, step: 0.05, fmt: (v) => `${Math.round(v * 100)}%`, tip: 'Share of sellable VM slots you expect to actually sell (paying). 70% = realistic; 100% = best-case only.' },
+        { key: 'utilization', label: 'Target utilization', min: 0.3, max: 0.95, step: 0.05, fmt: (v) => `${Math.round(v * 100)}%`, tip: 'Steady-state share of sellable slots that are paying. Use “Freeze retail prices” in VM pricing to set launch prices at a lower util and see effective margin as fill rate grows.' },
         { key: 'margin', label: 'Target gross margin', min: 0.1, max: 0.7, step: 0.05, fmt: (v) => `${Math.round(v * 100)}%`, tip: 'Profit margin on top of break-even. Target price = break-even ÷ (1 − margin). 40% → divide by 0.6.' },
       ],
     },

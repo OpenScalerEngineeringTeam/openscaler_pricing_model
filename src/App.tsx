@@ -22,6 +22,8 @@ export default function App() {
   const [plans, setPlans] = useState<Plan[]>(DEFAULT_PLANS);
   const [scenario, setScenario] = useState<Scenario>('p2');
   const [priceDisplay, setPriceDisplay] = useState<PriceDisplay>('usd');
+  const [freezePrices, setFreezePrices] = useState(false);
+  const [freezeUtilization, setFreezeUtilization] = useState(DEFAULT_PARAMS.utilization);
   const [activeParamTab, setActiveParamTab] = useState('fx');
   const [hwFromComponents, setHwFromComponents] = useState(false);
   const [saveStatus, setSaveStatus] = useState('');
@@ -67,13 +69,14 @@ export default function App() {
         activeParamTab,
         hwFromComponents,
         optimizer,
+        { freezePrices, freezeUtilization },
       ),
       null,
       2,
     );
     await saveConfigToFile(json);
     flashSave('Saved');
-  }, [params, scenario, priceDisplay, activeParamTab, hwFromComponents, optimizer, flashSave]);
+  }, [params, scenario, priceDisplay, activeParamTab, hwFromComponents, optimizer, freezePrices, freezeUtilization, flashSave]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -99,6 +102,8 @@ export default function App() {
           if (ui.priceDisplay) setPriceDisplay(ui.priceDisplay);
           if (ui.activeParamTab) setActiveParamTab(ui.activeParamTab);
           if (ui.hwFromComponents !== undefined) setHwFromComponents(ui.hwFromComponents);
+          if (ui.freezePrices !== undefined) setFreezePrices(ui.freezePrices);
+          if (ui.freezeUtilization !== undefined) setFreezeUtilization(ui.freezeUtilization);
           setOptimizer((prev) => ({
             pins: mergeOptimizerPins(loadedScenario, loadedHw, ui.optimizer?.pins ?? prev.pins),
             weights: ui.optimizer?.weights ?? prev.weights,
@@ -156,7 +161,15 @@ export default function App() {
         <div className="two-col">
           <div className="card">
             <div className="section-title">Cost breakdown / server / month</div>
-            <CostBreakdown params={params} computed={computed} priceDisplay={priceDisplay} />
+            <CostBreakdown
+              params={params}
+              computed={computed}
+              scenario={scenario}
+              hwFromComponents={hwFromComponents}
+              priceDisplay={priceDisplay}
+              freezePrices={freezePrices}
+              freezeUtilization={freezeUtilization}
+            />
             <ParamsPanel
               params={params}
               scenario={scenario}
@@ -167,7 +180,21 @@ export default function App() {
               onParam={setParam}
             />
           </div>
-          <VmPricingCard plans={plans} params={params} computed={computed} priceDisplay={priceDisplay} />
+          <VmPricingCard
+            plans={plans}
+            params={params}
+            computed={computed}
+            scenario={scenario}
+            hwFromComponents={hwFromComponents}
+            priceDisplay={priceDisplay}
+            freezePrices={freezePrices}
+            freezeUtilization={freezeUtilization}
+            onFreezePrices={(on) => {
+              setFreezePrices(on);
+              if (on) setFreezeUtilization(params.utilization);
+            }}
+            onFreezeUtilization={setFreezeUtilization}
+          />
         </div>
       )}
     </div>

@@ -4,14 +4,19 @@ import {
   fleetCapexDzd,
   hardwarePaybackMonths,
 } from '../lib/fleetCapex';
+import { computeAtUtilization, fleetMonthlyProfitFrozen } from '../lib/frozenPricing';
 import { fleetMonthlyProfitDzd } from '../lib/fleetProfit';
 import { fmt } from '../lib/pricing';
-import type { ComputeResult, ModelParams, PriceDisplay } from '../types';
+import type { ComputeResult, ModelParams, PriceDisplay, Scenario } from '../types';
 
 interface CostBreakdownProps {
   params: ModelParams;
   computed: ComputeResult;
+  scenario: Scenario;
+  hwFromComponents: boolean;
   priceDisplay: PriceDisplay;
+  freezePrices: boolean;
+  freezeUtilization: number;
 }
 
 function formatMoney(dzd: number, priceDisplay: PriceDisplay, usdDzd: number): string {
@@ -27,7 +32,15 @@ function formatPayback(months: number | null): { main: string; sub: string; tone
   return { main: `${rounded} mo`, sub, tone };
 }
 
-export function CostBreakdown({ params: P, computed: C, priceDisplay }: CostBreakdownProps) {
+export function CostBreakdown({
+  params: P,
+  computed: C,
+  scenario,
+  hwFromComponents,
+  priceDisplay,
+  freezePrices,
+  freezeUtilization,
+}: CostBreakdownProps) {
   const costs = [
     C.monthly_hw,
     C.monthly_power,
@@ -42,7 +55,10 @@ export function CostBreakdown({ params: P, computed: C, priceDisplay }: CostBrea
   const fleetCapex = fleetCapexDzd(P, C);
   const perSlot = capexPerPayingSlotDzd(P, C);
   const payback = formatPayback(hardwarePaybackMonths(P, C));
-  const fleetProfit = fleetMonthlyProfitDzd(P, C);
+  const anchorC = freezePrices ? computeAtUtilization(P, freezeUtilization, scenario, hwFromComponents) : null;
+  const fleetProfit = freezePrices && anchorC
+    ? fleetMonthlyProfitFrozen(P, C, anchorC)
+    : fleetMonthlyProfitDzd(P, C);
 
   return (
     <div>
@@ -76,6 +92,7 @@ export function CostBreakdown({ params: P, computed: C, priceDisplay }: CostBrea
           <div className={`metric-value${payback.tone}`}>{payback.main}</div>
           <div className="metric-sub">
             {payback.sub} · {formatMoney(fleetProfit, priceDisplay, P.usd_dzd)} / mo
+            {freezePrices && anchorC ? ` · frozen @ ${Math.round(freezeUtilization * 100)}% launch util` : ''}
           </div>
         </div>
       </div>

@@ -1,3 +1,4 @@
+import { frozenPlanTargetDzd } from './frozenPricing';
 import { planBreakEvenDzd } from './pricing';
 import { roundNiceUsd } from './nicePricing';
 import { canonicalUnits, maxPerServer, planFit } from './slotCapacity';
@@ -70,6 +71,7 @@ export function generateProposedCatalog(
   filters: CatalogFilters,
   P: ModelParams,
   C: ComputeResult,
+  priceAnchor?: ComputeResult | null,
 ): ProposedPlan[] {
   const candidates = buildCandidates(filters);
   const rows: ProposedPlan[] = [];
@@ -102,7 +104,10 @@ export function generateProposedCatalog(
     dedupe.add(dedupeKey);
 
     const beDzd = planBreakEvenDzd(spec, P, C);
-    const targetUsd = beDzd / (1 - P.margin) / P.usd_dzd;
+    const targetDzd = priceAnchor
+      ? frozenPlanTargetDzd(spec, P, priceAnchor)
+      : beDzd / (1 - P.margin);
+    const targetUsd = targetDzd / P.usd_dzd;
     const suggestedUsd = roundNiceUsd(targetUsd);
 
     rows.push({

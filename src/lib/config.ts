@@ -6,7 +6,12 @@ import {
 import type { ModelParams, PriceDisplay, Scenario } from '../types';
 
 export const CONFIG_FORMAT = 'openscaler-cost-model';
-export const CONFIG_VERSION = 4;
+export const CONFIG_VERSION = 5;
+
+export interface PricingUiState {
+  freezePrices: boolean;
+  freezeUtilization: number;
+}
 
 export function buildConfigDocument(
   params: ModelParams,
@@ -15,6 +20,7 @@ export function buildConfigDocument(
   activeParamTab: string,
   hwFromComponents: boolean,
   optimizer?: OptimizerSessionState,
+  pricingUi?: PricingUiState,
 ) {
   return {
     _meta: {
@@ -22,7 +28,18 @@ export function buildConfigDocument(
       format_version: CONFIG_VERSION,
       saved_at: new Date().toISOString(),
     },
-    ui: { scenario, price_display: priceDisplay, active_param_tab: activeParamTab, hw_from_components: hwFromComponents },
+    ui: {
+      scenario,
+      price_display: priceDisplay,
+      active_param_tab: activeParamTab,
+      hw_from_components: hwFromComponents,
+      ...(pricingUi
+        ? {
+            freeze_prices: pricingUi.freezePrices,
+            freeze_utilization: pricingUi.freezeUtilization,
+          }
+        : {}),
+    },
     parameters: { ...params },
     ...(optimizer ? { optimizer: buildOptimizerConfigSection(optimizer) } : {}),
   };
@@ -45,6 +62,8 @@ export function applyConfigDocument(
   priceDisplay?: PriceDisplay;
   activeParamTab?: string;
   hwFromComponents?: boolean;
+  freezePrices?: boolean;
+  freezeUtilization?: number;
   optimizer?: Partial<OptimizerSessionState>;
 } {
   const doc = data as Record<string, unknown>;
@@ -80,16 +99,24 @@ export function applyConfigDocument(
     price_display?: PriceDisplay;
     active_param_tab?: string;
     hw_from_components?: boolean;
+    freeze_prices?: boolean;
+    freeze_utilization?: number;
   } | undefined;
   const scenario = ui?.scenario === 'p1' || ui?.scenario === 'p2' ? ui.scenario : undefined;
   const hwFromComponents =
     ui?.hw_from_components === true ? true : ui?.hw_from_components === false ? false : undefined;
   const optimizer = optimizerFromConfigSection(doc.optimizer, scenario ?? 'p2', hwFromComponents ?? false);
+  const freezeUtil = ui?.freeze_utilization;
   return {
     scenario,
     priceDisplay: ui?.price_display === 'usd' || ui?.price_display === 'dzd' ? ui.price_display : undefined,
     activeParamTab: ui?.active_param_tab,
     hwFromComponents,
+    freezePrices: ui?.freeze_prices === true ? true : ui?.freeze_prices === false ? false : undefined,
+    freezeUtilization:
+      typeof freezeUtil === 'number' && !Number.isNaN(freezeUtil) && freezeUtil > 0 && freezeUtil <= 1
+        ? freezeUtil
+        : undefined,
     optimizer: optimizer ?? undefined,
   };
 }
