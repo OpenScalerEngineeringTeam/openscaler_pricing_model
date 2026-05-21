@@ -61,7 +61,7 @@ export function Toolbar({
           </select>
         </div>
         )}
-        <button type="button" className="file-btn file-btn--primary" onClick={onSave} title="Save config (Ctrl+S)" disabled={activeView === 'optimizer'}>
+        <button type="button" className="file-btn file-btn--primary" onClick={onSave} title="Save config (Ctrl+S)">
           Save config…
         </button>
         <button type="button" className="file-btn" onClick={() => document.getElementById('config-file-input')?.click()} title="Load config">

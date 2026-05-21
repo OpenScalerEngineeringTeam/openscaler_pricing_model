@@ -1,7 +1,12 @@
+import {
+  buildOptimizerConfigSection,
+  optimizerFromConfigSection,
+  type OptimizerSessionState,
+} from './optimizerState';
 import type { ModelParams, PriceDisplay, Scenario } from '../types';
 
 export const CONFIG_FORMAT = 'openscaler-cost-model';
-export const CONFIG_VERSION = 3;
+export const CONFIG_VERSION = 4;
 
 export function buildConfigDocument(
   params: ModelParams,
@@ -9,6 +14,7 @@ export function buildConfigDocument(
   priceDisplay: PriceDisplay,
   activeParamTab: string,
   hwFromComponents: boolean,
+  optimizer?: OptimizerSessionState,
 ) {
   return {
     _meta: {
@@ -18,6 +24,7 @@ export function buildConfigDocument(
     },
     ui: { scenario, price_display: priceDisplay, active_param_tab: activeParamTab, hw_from_components: hwFromComponents },
     parameters: { ...params },
+    ...(optimizer ? { optimizer: buildOptimizerConfigSection(optimizer) } : {}),
   };
 }
 
@@ -33,7 +40,13 @@ function readParameterValue(entry: unknown): number | undefined {
 export function applyConfigDocument(
   data: unknown,
   setParams: (fn: (prev: ModelParams) => ModelParams) => void,
-): { scenario?: Scenario; priceDisplay?: PriceDisplay; activeParamTab?: string; hwFromComponents?: boolean } {
+): {
+  scenario?: Scenario;
+  priceDisplay?: PriceDisplay;
+  activeParamTab?: string;
+  hwFromComponents?: boolean;
+  optimizer?: Partial<OptimizerSessionState>;
+} {
   const doc = data as Record<string, unknown>;
   if (!doc || (doc._meta as { format?: string })?.format !== CONFIG_FORMAT) {
     throw new Error('Not a valid OpenScaler cost model config (missing or unknown format).');
@@ -68,11 +81,16 @@ export function applyConfigDocument(
     active_param_tab?: string;
     hw_from_components?: boolean;
   } | undefined;
+  const scenario = ui?.scenario === 'p1' || ui?.scenario === 'p2' ? ui.scenario : undefined;
+  const hwFromComponents =
+    ui?.hw_from_components === true ? true : ui?.hw_from_components === false ? false : undefined;
+  const optimizer = optimizerFromConfigSection(doc.optimizer, scenario ?? 'p2', hwFromComponents ?? false);
   return {
-    scenario: ui?.scenario === 'p1' || ui?.scenario === 'p2' ? ui.scenario : undefined,
+    scenario,
     priceDisplay: ui?.price_display === 'usd' || ui?.price_display === 'dzd' ? ui.price_display : undefined,
     activeParamTab: ui?.active_param_tab,
-    hwFromComponents: ui?.hw_from_components === true ? true : ui?.hw_from_components === false ? false : undefined,
+    hwFromComponents,
+    optimizer: optimizer ?? undefined,
   };
 }
 

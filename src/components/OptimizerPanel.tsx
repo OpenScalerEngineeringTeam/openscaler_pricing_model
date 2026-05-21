@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { defaultOptimizerPins, getOptimizerControlFields } from '../lib/paramBounds';
+import type { PinState } from '../lib/optimizerState';
 import {
   DEFAULT_OBJECTIVE_WEIGHTS,
   OBJECTIVE_WEIGHT_LABELS,
@@ -11,12 +12,18 @@ import { runSearch, type SearchResult } from '../lib/search';
 import { fmt } from '../lib/pricing';
 import type { ModelParams, Scenario } from '../types';
 
-export type PinState = Partial<Record<keyof ModelParams, boolean>>;
-
 interface OptimizerPanelProps {
   params: ModelParams;
   scenario: Scenario;
   hwFromComponents: boolean;
+  pins: PinState;
+  weights: ObjectiveWeights;
+  samples: number;
+  seed: number;
+  onPins: (pins: PinState) => void;
+  onWeights: (weights: ObjectiveWeights) => void;
+  onSamples: (samples: number) => void;
+  onSeed: (seed: number) => void;
   onApply: (params: ModelParams) => void;
   onBack: () => void;
 }
@@ -36,6 +43,14 @@ export function OptimizerPanel({
   params,
   scenario,
   hwFromComponents,
+  pins,
+  weights,
+  samples,
+  seed,
+  onPins,
+  onWeights,
+  onSamples,
+  onSeed,
   onApply,
   onBack,
 }: OptimizerPanelProps) {
@@ -45,15 +60,6 @@ export function OptimizerPanel({
   );
   const searchableKeys = useMemo(() => fields.map((f) => f.key), [fields]);
 
-  const [pins, setPins] = useState<PinState>(() => defaultOptimizerPins(scenario, hwFromComponents));
-
-  useEffect(() => {
-    setPins(defaultOptimizerPins(scenario, hwFromComponents));
-  }, [scenario, hwFromComponents]);
-
-  const [weights, setWeights] = useState<ObjectiveWeights>(() => ({ ...DEFAULT_OBJECTIVE_WEIGHTS }));
-  const [samples, setSamples] = useState(1000);
-  const [seed, setSeed] = useState(42);
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<SearchResult | null>(null);
   const [error, setError] = useState('');
@@ -80,27 +86,33 @@ export function OptimizerPanel({
     [params, evalCtx],
   );
 
-  const setWeight = useCallback((key: keyof ObjectiveWeights, pct: number) => {
-    const v = Math.max(0, Math.min(100, pct)) / 100;
-    setWeights((prev) => normalizeWeights({ ...prev, [key]: v }));
-  }, []);
+  const setWeight = useCallback(
+    (key: keyof ObjectiveWeights, pct: number) => {
+      const v = Math.max(0, Math.min(100, pct)) / 100;
+      onWeights(normalizeWeights({ ...weights, [key]: v }));
+    },
+    [weights, onWeights],
+  );
 
   const resetWeights = useCallback(() => {
-    setWeights({ ...DEFAULT_OBJECTIVE_WEIGHTS });
-  }, []);
+    onWeights({ ...DEFAULT_OBJECTIVE_WEIGHTS });
+  }, [onWeights]);
 
-  const togglePin = useCallback((key: keyof ModelParams) => {
-    setPins((p) => ({ ...p, [key]: !p[key] }));
-  }, []);
+  const togglePin = useCallback(
+    (key: keyof ModelParams) => {
+      onPins({ ...pins, [key]: !pins[key] });
+    },
+    [pins, onPins],
+  );
 
   const pinAll = useCallback(() => {
     const next: PinState = {};
     for (const f of fields) next[f.key] = true;
-    setPins(next);
-  }, [fields]);
+    onPins(next);
+  }, [fields, onPins]);
   const unpinAll = useCallback(
-    () => setPins(defaultOptimizerPins(scenario, hwFromComponents)),
-    [scenario, hwFromComponents],
+    () => onPins(defaultOptimizerPins(scenario, hwFromComponents)),
+    [scenario, hwFromComponents, onPins],
   );
 
   const handleRun = useCallback(() => {
@@ -202,7 +214,7 @@ export function OptimizerPanel({
                 max={5000}
                 step={100}
                 value={samples}
-                onChange={(e) => setSamples(Math.max(100, +e.target.value || 1000))}
+                onChange={(e) => onSamples(Math.max(100, +e.target.value || 1000))}
                 disabled={running}
               />
             </label>
@@ -211,7 +223,7 @@ export function OptimizerPanel({
               <input
                 type="number"
                 value={seed}
-                onChange={(e) => setSeed(+e.target.value || 42)}
+                onChange={(e) => onSeed(+e.target.value || 42)}
                 disabled={running}
               />
             </label>
