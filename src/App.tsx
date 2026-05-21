@@ -107,7 +107,7 @@ export default function App() {
         <div className="two-col">
           <div className="card">
             <div className="section-title">Cost breakdown / server / month</div>
-            <CostBreakdown computed={computed} />
+            <CostBreakdown params={params} computed={computed} priceDisplay={priceDisplay} />
             <ParamsPanel
               params={params}
               scenario={scenario}

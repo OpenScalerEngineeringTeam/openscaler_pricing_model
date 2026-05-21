@@ -1,12 +1,33 @@
 import { BAR_COLORS, BAR_LABELS } from '../lib/constants';
+import {
+  capexPerPayingSlotDzd,
+  fleetCapexDzd,
+  hardwarePaybackMonths,
+} from '../lib/fleetCapex';
+import { fleetMonthlyProfitDzd } from '../lib/fleetProfit';
 import { fmt } from '../lib/pricing';
-import type { ComputeResult } from '../types';
+import type { ComputeResult, ModelParams, PriceDisplay } from '../types';
 
 interface CostBreakdownProps {
+  params: ModelParams;
   computed: ComputeResult;
+  priceDisplay: PriceDisplay;
 }
 
-export function CostBreakdown({ computed: C }: CostBreakdownProps) {
+function formatMoney(dzd: number, priceDisplay: PriceDisplay, usdDzd: number): string {
+  if (priceDisplay === 'dzd') return `${fmt(dzd)} DZD`;
+  return `$${(dzd / usdDzd).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+}
+
+function formatPayback(months: number | null): { main: string; sub: string; tone: '' | ' warn' | ' danger' } {
+  if (months === null) return { main: '—', sub: 'No profit at target margin', tone: ' danger' };
+  const rounded = Math.round(months);
+  const sub = months >= 12 ? `~${(months / 12).toFixed(1)} years` : 'Months at steady-state util';
+  const tone = months > 84 ? ' danger' : months > 48 ? ' warn' : '';
+  return { main: `${rounded} mo`, sub, tone };
+}
+
+export function CostBreakdown({ params: P, computed: C, priceDisplay }: CostBreakdownProps) {
   const costs = [
     C.monthly_hw,
     C.monthly_power,
@@ -17,6 +38,11 @@ export function CostBreakdown({ computed: C }: CostBreakdownProps) {
     C.monthly_misc,
   ];
   const pcts = costs.map((c) => (c / C.total) * 100);
+
+  const fleetCapex = fleetCapexDzd(P, C);
+  const perSlot = capexPerPayingSlotDzd(P, C);
+  const payback = formatPayback(hardwarePaybackMonths(P, C));
+  const fleetProfit = fleetMonthlyProfitDzd(P, C);
 
   return (
     <div>
@@ -30,6 +56,29 @@ export function CostBreakdown({ computed: C }: CostBreakdownProps) {
           <span className="breakdown-val">{fmt(c)}</span>
         </div>
       ))}
+      <div className="metrics-grid fleet-capex-metrics">
+        <div className="metric">
+          <div className="metric-label">Fleet CAPEX (landed HW)</div>
+          <div className="metric-value">{formatMoney(fleetCapex, priceDisplay, P.usd_dzd)}</div>
+          <div className="metric-sub">
+            {P.num_servers} × {formatMoney(C.hw_landed_dzd, priceDisplay, P.usd_dzd)} / server
+          </div>
+        </div>
+        <div className="metric">
+          <div className="metric-label">CAPEX / paying slot</div>
+          <div className="metric-value">
+            {perSlot !== null ? formatMoney(perSlot, priceDisplay, P.usd_dzd) : '—'}
+          </div>
+          <div className="metric-sub">One-time hardware per VM @ {Math.round(P.utilization * 100)}% util</div>
+        </div>
+        <div className="metric">
+          <div className="metric-label">HW payback (CAPEX ÷ fleet profit)</div>
+          <div className={`metric-value${payback.tone}`}>{payback.main}</div>
+          <div className="metric-sub">
+            {payback.sub} · {formatMoney(fleetProfit, priceDisplay, P.usd_dzd)} / mo
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
