@@ -1,5 +1,23 @@
-import type { CatalogFilters } from '../types';
+import type { CatalogFilters, DuplicatePriceStrategy } from '../types';
 import { DEFAULT_CATALOG_FILTERS } from '../types';
+
+const DUPLICATE_PRICE_OPTIONS: { value: DuplicatePriceStrategy; label: string; hint: string }[] = [
+  {
+    value: 'collapse',
+    label: 'Collapse same price',
+    hint: 'Keep the best spec when rounding yields one retail price (recommended).',
+  },
+  {
+    value: 'bump',
+    label: 'One SKU per size + stair-step',
+    hint: 'Keep the best profile per size (units), then nudge prices so each size is strictly more expensive than the last.',
+  },
+  {
+    value: 'show',
+    label: 'Show all',
+    hint: 'List every profile; same retail price may appear on multiple specs.',
+  },
+];
 
 interface ProposedCatalogFiltersProps {
   filters: CatalogFilters;
@@ -69,15 +87,21 @@ export function ProposedCatalogFilters({ filters, onChange }: ProposedCatalogFil
               {label}
             </label>
           ))}
-          <label className="filter-check">
-            <input
-              type="checkbox"
-              checked={filters.hideDuplicates}
-              onChange={(e) => setField('hideDuplicates', e.target.checked)}
-            />
-            Hide duplicate vCPU/RAM pairs
-          </label>
         </div>
+        <fieldset className="filter-duplicate-price">
+          <legend className="filter-profiles-label">Same retail price</legend>
+          {DUPLICATE_PRICE_OPTIONS.map(({ value, label, hint }) => (
+            <label key={value} className="filter-radio" title={hint}>
+              <input
+                type="radio"
+                name="duplicatePriceStrategy"
+                checked={filters.duplicatePriceStrategy === value}
+                onChange={() => setField('duplicatePriceStrategy', value)}
+              />
+              {label}
+            </label>
+          ))}
+        </fieldset>
         <div className="catalog-filters-actions">
           <button type="button" className="file-btn" onClick={handleReset}>
             Reset

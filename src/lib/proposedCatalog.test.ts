@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { compute } from './compute';
 import { DEFAULT_PARAMS } from './constants';
-import { generateProposedCatalog, smallestTierMaxPerServer } from './proposedCatalog';
+import {
+  applyDuplicatePriceStrategy,
+  generateProposedCatalog,
+  isBetterSpec,
+  smallestTierMaxPerServer,
+} from './proposedCatalog';
 import { canonicalUnits } from './slotCapacity';
 import { DEFAULT_CATALOG_FILTERS } from '../types';
 
@@ -28,11 +33,51 @@ describe('generateProposedCatalog', () => {
     for (let i = 1; i < rows.length; i++) {
       const prev = rows[i - 1];
       const cur = rows[i];
+      expect(cur.units).toBeGreaterThanOrEqual(prev.units);
       if (cur.units === prev.units) {
         expect(cur.suggestedUsd).toBeGreaterThanOrEqual(prev.suggestedUsd);
       } else {
-        expect(cur.units).toBeGreaterThan(prev.units);
+        expect(cur.suggestedUsd).toBeGreaterThan(prev.suggestedUsd);
       }
+    }
+  });
+
+  it('collapse removes duplicate rounded prices (keeps best spec)', () => {
+    const all = generateProposedCatalog(
+      { ...DEFAULT_CATALOG_FILTERS, duplicatePriceStrategy: 'show', maxRows: 50 },
+      P,
+      C,
+    );
+    const collapsed = applyDuplicatePriceStrategy(all, 'collapse');
+    const prices = collapsed.map((r) => r.suggestedUsd);
+    expect(new Set(prices).size).toBe(prices.length);
+    expect(collapsed.length).toBeLessThan(all.length);
+    for (const row of collapsed) {
+      const peers = all.filter((r) => r.suggestedUsd === row.suggestedUsd);
+      expect(peers.some((r) => r.id === row.id)).toBe(true);
+      expect(peers.every((r) => !isBetterSpec(r, row))).toBe(true);
+    }
+  });
+
+  it('bump keeps one best spec per units and strictly increasing prices', () => {
+    const all = generateProposedCatalog(
+      { ...DEFAULT_CATALOG_FILTERS, duplicatePriceStrategy: 'show', maxRows: 50 },
+      P,
+      C,
+    );
+    const bumped = applyDuplicatePriceStrategy(all, 'bump');
+    const unitCounts = new Map<number, number>();
+    for (const row of bumped) {
+      unitCounts.set(row.units, (unitCounts.get(row.units) ?? 0) + 1);
+    }
+    for (const count of unitCounts.values()) expect(count).toBe(1);
+    for (let i = 1; i < bumped.length; i++) {
+      expect(bumped[i].units).toBeGreaterThan(bumped[i - 1].units);
+      expect(bumped[i].suggestedUsd).toBeGreaterThan(bumped[i - 1].suggestedUsd);
+    }
+    for (const row of bumped) {
+      const peers = all.filter((r) => r.units === row.units);
+      expect(peers.every((r) => !isBetterSpec(r, row))).toBe(true);
     }
   });
 

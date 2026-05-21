@@ -8,7 +8,7 @@ import {
 import { formatSuggestedUsd, roundNiceUsd } from '../lib/nicePricing';
 import { fleetMonthlyProfitDzd } from '../lib/fleetProfit';
 import { fmt, formatListed, formatModelPrice, planBreakEvenDzd, priceFootnote } from '../lib/pricing';
-import { generateProposedCatalog, smallestTierMaxPerServer } from '../lib/proposedCatalog';
+import { generateProposedCatalogWithMeta, smallestTierMaxPerServer } from '../lib/proposedCatalog';
 import {
   fitLabel,
   hostCapacitySummary,
@@ -87,10 +87,15 @@ export function VmPricingCard({
     [plans, P, C, usd, freezePrices, anchorC],
   );
 
-  const proposed = useMemo(
-    () => generateProposedCatalog(catalogFilters, P, C, freezePrices ? anchorC : null),
+  const proposedMeta = useMemo(
+    () => generateProposedCatalogWithMeta(catalogFilters, P, C, freezePrices ? anchorC : null),
     [catalogFilters, P, C, freezePrices, anchorC],
   );
+  const proposed = proposedMeta.plans;
+  const proposedHiddenByPrice =
+    catalogFilters.duplicatePriceStrategy !== 'show'
+      ? proposedMeta.beforeDuplicateHandling - proposed.length
+      : 0;
 
   const hostCap = useMemo(() => hostCapacitySummary(P), [P]);
   const smallestFit = smallestTierMaxPerServer(proposed);
@@ -238,7 +243,13 @@ export function VmPricingCard({
         <div id="vm-pricing-proposed" className="proposed-section" role="tabpanel" aria-labelledby="vm-tab-proposed">
           <div className="proposed-header">
             <span className="proposed-meta">
-              {proposed.length} tiers · host {hostCap.binding} ·{' '}
+              {proposed.length} tiers
+              {proposedHiddenByPrice > 0 &&
+                (catalogFilters.duplicatePriceStrategy === 'collapse'
+                  ? ` (${proposedHiddenByPrice} hidden — same rounded price)`
+                  : ` (${proposedHiddenByPrice} hidden — merged profiles / stair-step)`)}
+              {' · '}
+              host {hostCap.binding} ·{' '}
               {smallestFit != null ? `≥${smallestFit} VMs/host (smallest shown)` : 'no tiers match filters'}
             </span>
           </div>

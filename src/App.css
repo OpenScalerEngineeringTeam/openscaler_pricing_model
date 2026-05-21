@@ -61,6 +61,8 @@ body{font-family:var(--font-sans,system-ui,-apple-system,sans-serif);color:var(-
 .filter-profiles{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;margin-bottom:.5rem}
 .filter-profiles-label{font-size:10px;font-weight:600;color:var(--color-text-secondary);width:100%}
 .filter-check{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--color-text-primary);cursor:pointer}
+.filter-duplicate-price{border:none;margin:0 0 .5rem;padding:0}
+.filter-duplicate-price .filter-radio{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--color-text-primary);cursor:pointer;margin-right:12px}
 .catalog-filters-actions{display:flex;gap:8px}
 .breakdown-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;font-size:12px}
 .breakdown-bar-wrap{flex:1;height:9px;background:var(--color-background-secondary,#eee);border-radius:5px;overflow:hidden}

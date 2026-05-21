@@ -99,12 +99,15 @@ export interface ProposedPlan extends Plan {
   suggestedUsd: number;
 }
 
+/** How to handle multiple specs that round to the same suggested retail price. */
+export type DuplicatePriceStrategy = 'collapse' | 'bump' | 'show';
+
 export interface CatalogFilters {
   maxVcpus: number;
   maxRam: number;
   maxRows: number;
   minFit: number;
-  hideDuplicates: boolean;
+  duplicatePriceStrategy: DuplicatePriceStrategy;
   profiles: {
     shared: boolean;
     balanced: boolean;
@@ -118,6 +121,6 @@ export const DEFAULT_CATALOG_FILTERS: CatalogFilters = {
   maxRam: Number.MAX_SAFE_INTEGER,
   maxRows: 30,
   minFit: 4,
-  hideDuplicates: true,
+  duplicatePriceStrategy: 'collapse',
   profiles: { shared: true, balanced: true, general: true, memory: true },
 };
